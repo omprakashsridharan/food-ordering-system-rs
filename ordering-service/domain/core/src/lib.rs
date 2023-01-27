@@ -1,6 +1,6 @@
 use common::error::OrderDomainError;
 use entity::{Order, Restaurant};
-use event::OrderCreated;
+use event::{OrderCancelled, OrderCreated, OrderPaid};
 
 mod entity {
     use common::entity::{AggregateRoot, BaseEntity};
@@ -121,7 +121,7 @@ mod entity {
 
         pub fn init_cancel(
             &mut self,
-            mut failure_messages: Vec<String>,
+            failure_messages: Vec<String>,
         ) -> Result<(), OrderDomainError> {
             if self.order_status != OrderStatus::Paid {
                 return Err(OrderDomainError::InvalidOrderStatus(String::from(
@@ -129,21 +129,18 @@ mod entity {
                 )));
             }
             self.order_status = OrderStatus::Cancelling;
-            self.failure_messages.append(&mut failure_messages);
+            self.failure_messages.append(&mut failure_messages.clone());
             Ok(())
         }
 
-        pub fn cancel(
-            &mut self,
-            mut failure_messages: Vec<String>,
-        ) -> Result<(), OrderDomainError> {
+        pub fn cancel(&mut self, failure_messages: Vec<String>) -> Result<(), OrderDomainError> {
             if !(self.order_status == OrderStatus::Cancelling
                 || self.order_status == OrderStatus::Pending)
             {
                 return Err(OrderDomainError::InvalidOrderStatus(String::from("cancel")));
             }
             self.order_status = OrderStatus::Cancelled;
-            self.failure_messages.append(&mut failure_messages);
+            self.failure_messages.append(&mut failure_messages.clone());
             Ok(())
         }
     }
@@ -178,25 +175,34 @@ pub mod event {
     pub struct OrderCreated(pub Order);
 
     #[derive(Clone)]
-    pub struct OrderCancelled(Order);
+    pub struct OrderCancelled(pub Order);
 
     #[derive(Clone)]
-    pub struct OrderPaid(Order);
+    pub struct OrderPaid(pub Order);
 }
 
 pub trait OrderDomainService {
     fn validate_and_initiate_order(
-        &self,
         order: Order,
         restaurant: Restaurant,
     ) -> Result<event::OrderCreated, OrderDomainError>;
+
+    fn pay_order(order: Order) -> Result<event::OrderPaid, OrderDomainError>;
+
+    fn approve_order(order: Order) -> Result<(), OrderDomainError>;
+
+    fn cancel_order_payment(
+        order: Order,
+        failure_messages: Vec<String>,
+    ) -> Result<event::OrderCancelled, OrderDomainError>;
+
+    fn cancel_order(order: Order, failure_messages: Vec<String>) -> Result<(), OrderDomainError>;
 }
 
 pub struct OrderDomainServiceImpl {}
 
 impl OrderDomainService for OrderDomainServiceImpl {
     fn validate_and_initiate_order(
-        &self,
         mut order: Order,
         restaurant: Restaurant,
     ) -> Result<event::OrderCreated, OrderDomainError> {
@@ -214,5 +220,30 @@ impl OrderDomainService for OrderDomainServiceImpl {
             order.validate_order()?;
             Ok(OrderCreated(order))
         }
+    }
+
+    fn pay_order(mut order: Order) -> Result<event::OrderPaid, OrderDomainError> {
+        order.pay()?;
+        Ok(OrderPaid(order))
+    }
+
+    fn approve_order(mut order: Order) -> Result<(), OrderDomainError> {
+        order.approve()?;
+        Ok(())
+    }
+
+    fn cancel_order_payment(
+        mut order: Order,
+        failure_messages: Vec<String>,
+    ) -> Result<event::OrderCancelled, OrderDomainError> {
+        order.init_cancel(failure_messages)?;
+        Ok(OrderCancelled(order))
+    }
+
+    fn cancel_order(
+        mut order: Order,
+        failure_messages: Vec<String>,
+    ) -> Result<(), OrderDomainError> {
+        order.cancel(failure_messages.clone())
     }
 }
