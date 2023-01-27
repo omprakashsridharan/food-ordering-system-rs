@@ -1,5 +1,6 @@
 mod entity {
     use common::entity::{AggregateRoot, BaseEntity};
+    use common::error::OrderDomainError;
     use common::value_object::money::Money;
     use common::value_object::{CustomerId, OrderId, OrderStatus, ProductId, RestaurantId};
 
@@ -34,6 +35,14 @@ mod entity {
         sub_total: Money,
     }
 
+    impl OrderItem {
+        pub fn is_price_valid(&self) -> bool {
+            return self.price.is_greater_than_zero()
+                && self.price == self.product.price
+                && self.price.clone() * self.quantity == self.sub_total;
+        }
+    }
+
     #[derive(Clone)]
     pub struct Order {
         aggregate_root: AggregateRoot<OrderId>,
@@ -45,6 +54,82 @@ mod entity {
         tracking_id: TrackingId,
         order_status: OrderStatus,
         failure_messages: Vec<String>,
+    }
+
+    impl Order {
+        pub fn validate_total_price(&self) -> Result<(), OrderDomainError> {
+            if self.price.is_greater_than_zero() {
+                return Err(OrderDomainError::TotalPriceZeroError);
+            }
+            return Ok(());
+        }
+
+        pub fn validate_items_price(&self) -> Result<(), OrderDomainError> {
+            let mut order_items_total_price = Money::new(0.0);
+            for item in self.items.iter() {
+                if item.is_price_valid() {
+                    order_items_total_price += item.sub_total.clone();
+                } else {
+                    return Err(OrderDomainError::OrderItemPriceInvalid);
+                }
+            }
+            if order_items_total_price != self.price {
+                return Err(OrderDomainError::OrderTotalPriceMismatch);
+            }
+            return Ok(());
+        }
+
+        pub fn validate_order(&self) -> Result<(), OrderDomainError> {
+            self.validate_total_price()?;
+            self.validate_items_price()?;
+            Ok(())
+        }
+
+        pub fn pay(&mut self) -> Result<(), OrderDomainError> {
+            if self.order_status != OrderStatus::Pending {
+                return Err(OrderDomainError::InvalidOrderStatus(String::from("pay")));
+            }
+            self.order_status = OrderStatus::Paid;
+            Ok(())
+        }
+
+        pub fn approve(&mut self) -> Result<(), OrderDomainError> {
+            if self.order_status != OrderStatus::Paid {
+                return Err(OrderDomainError::InvalidOrderStatus(String::from(
+                    "approve",
+                )));
+            }
+            self.order_status = OrderStatus::Approved;
+            Ok(())
+        }
+
+        pub fn init_cancel(
+            &mut self,
+            mut failure_messages: Vec<String>,
+        ) -> Result<(), OrderDomainError> {
+            if self.order_status != OrderStatus::Paid {
+                return Err(OrderDomainError::InvalidOrderStatus(String::from(
+                    "init cancel",
+                )));
+            }
+            self.order_status = OrderStatus::Cancelling;
+            self.failure_messages.append(&mut failure_messages);
+            Ok(())
+        }
+
+        pub fn cancel(
+            &mut self,
+            mut failure_messages: Vec<String>,
+        ) -> Result<(), OrderDomainError> {
+            if !(self.order_status == OrderStatus::Cancelling
+                || self.order_status == OrderStatus::Pending)
+            {
+                return Err(OrderDomainError::InvalidOrderStatus(String::from("cancel")));
+            }
+            self.order_status = OrderStatus::Cancelled;
+            self.failure_messages.append(&mut failure_messages);
+            Ok(())
+        }
     }
 }
 

@@ -32,9 +32,10 @@ pub mod value_object {
         base_id: BaseId<uuid::Uuid>,
     }
 
-    #[derive(Clone)]
+    #[derive(Clone, PartialEq)]
     pub enum OrderStatus {
         Pending,
+        Paid,
         Approved,
         Cancelling,
         Cancelled,
@@ -58,11 +59,58 @@ pub mod value_object {
     }
 
     pub mod money {
+        use std::ops;
 
         #[derive(Clone)]
         pub struct Money {
             amount: f64,
         }
+
+        impl PartialEq for Money {
+            fn eq(&self, other: &Self) -> bool {
+                self.amount == other.amount
+            }
+        }
+
+        impl ops::AddAssign<Money> for Money {
+            fn add_assign(&mut self, rhs: Money) {
+                self.amount += rhs.amount
+            }
+        }
+
+        impl ops::Mul<u64> for Money {
+            type Output = Money;
+
+            fn mul(self, rhs: u64) -> Self::Output {
+                return Money::new(self.amount * (rhs as f64));
+            }
+        }
+
+        impl Money {
+            pub fn new(amount: f64) -> Self {
+                Self { amount }
+            }
+            pub fn is_greater_than_zero(&self) -> bool {
+                return self.amount > 0.0;
+            }
+        }
+
         const ZERO: Money = Money { amount: 0.0 };
+    }
+}
+
+pub mod error {
+    use thiserror::Error;
+
+    #[derive(Error, Debug)]
+    pub enum OrderDomainError {
+        #[error("the total price of order should be greater than zero")]
+        TotalPriceZeroError,
+        #[error("the price of order item is invalid")]
+        OrderItemPriceInvalid,
+        #[error("the price of individual order items does not add up to the total price of order")]
+        OrderTotalPriceMismatch,
+        #[error("the order status is invalid for {0} operation")]
+        InvalidOrderStatus(String),
     }
 }
