@@ -112,5 +112,7 @@ pub mod error {
         OrderTotalPriceMismatch,
         #[error("the order status is invalid for {0} operation")]
         InvalidOrderStatus(String),
+        #[error("inactive restaurant")]
+        InactiveRestaurant,
     }
 }

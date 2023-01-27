@@ -1,3 +1,7 @@
+use common::error::OrderDomainError;
+use entity::{Order, Restaurant};
+use event::OrderCreated;
+
 mod entity {
     use common::entity::{AggregateRoot, BaseEntity};
     use common::error::OrderDomainError;
@@ -14,22 +18,34 @@ mod entity {
     #[derive(Clone)]
     pub struct Product {
         base_entity: BaseEntity<ProductId>,
-        name: String,
-        price: Money,
+        pub name: String,
+        pub price: Money,
+    }
+
+    impl PartialEq for Product {
+        fn eq(&self, other: &Self) -> bool {
+            self.name == other.name && self.price == other.price
+        }
     }
 
     #[derive(Clone)]
     pub struct Restaurant {
         base_entity: BaseEntity<RestaurantId>,
-        products: Vec<Product>,
+        pub products: Vec<Product>,
         active: bool,
+    }
+
+    impl Restaurant {
+        pub fn is_active(&self) -> bool {
+            return self.active;
+        }
     }
 
     #[derive(Clone)]
     pub struct OrderItem {
         base_entity: BaseEntity<OrderItemId>,
         order_id: OrderId,
-        product: Product,
+        pub product: Product,
         quantity: u64,
         price: Money,
         sub_total: Money,
@@ -50,7 +66,7 @@ mod entity {
         restaurant_id: RestaurantId,
         street_address: StreetAddress,
         price: Money,
-        items: Vec<OrderItem>,
+        pub items: Vec<OrderItem>,
         tracking_id: TrackingId,
         order_status: OrderStatus,
         failure_messages: Vec<String>,
@@ -152,5 +168,51 @@ mod value_object {
     #[derive(Clone)]
     pub struct TrackingId {
         base_id: BaseId<uuid::Uuid>,
+    }
+}
+
+pub mod event {
+    use crate::entity::Order;
+
+    #[derive(Clone)]
+    pub struct OrderCreated(pub Order);
+
+    #[derive(Clone)]
+    pub struct OrderCancelled(Order);
+
+    #[derive(Clone)]
+    pub struct OrderPaid(Order);
+}
+
+pub trait OrderDomainService {
+    fn validate_and_initiate_order(
+        &self,
+        order: Order,
+        restaurant: Restaurant,
+    ) -> Result<event::OrderCreated, OrderDomainError>;
+}
+
+pub struct OrderDomainServiceImpl {}
+
+impl OrderDomainService for OrderDomainServiceImpl {
+    fn validate_and_initiate_order(
+        &self,
+        mut order: Order,
+        restaurant: Restaurant,
+    ) -> Result<event::OrderCreated, OrderDomainError> {
+        if !restaurant.is_active() {
+            return Err(OrderDomainError::InactiveRestaurant);
+        } else {
+            for item in order.items.iter_mut() {
+                for product in restaurant.products.iter() {
+                    if *product == item.product {
+                        item.product.name = product.name.clone();
+                        item.product.price = product.price.clone();
+                    }
+                }
+            }
+            order.validate_order()?;
+            Ok(OrderCreated(order))
+        }
     }
 }
