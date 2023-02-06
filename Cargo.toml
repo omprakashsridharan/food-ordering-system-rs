@@ -12,6 +12,7 @@ path = "./ordering-service/container/src/main.rs"
 [workspace]
 members = [
   "ordering-service/domain/core",
+  "ordering-service/domain/service",
   "ordering-service/container",
   "common",
 ]
@@ -23,3 +24,7 @@ uuid = { version = "1.2.2", features = [
   "macro-diagnostics", # Enable better diagnostics for compile-time UUIDs
 ] }
 thiserror = "1.0.38"
+chrono = "0.4.23"
+derive_builder = "0.12.0"
+
+[dependencies]

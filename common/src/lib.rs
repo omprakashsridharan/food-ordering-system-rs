@@ -1,5 +1,7 @@
 pub mod entity {
-    #[derive(Clone)]
+    use derive_builder::Builder;
+
+    #[derive(Clone, Builder)]
     pub struct BaseEntity<ID: Clone> {
         id: ID,
     }
@@ -11,7 +13,9 @@ pub mod entity {
 }
 
 pub mod value_object {
-    #[derive(Clone)]
+    use derive_builder::Builder;
+
+    #[derive(Clone, Builder)]
     pub struct BaseId<V: Clone> {
         value: V,
     }
@@ -48,12 +52,12 @@ pub mod value_object {
         Canceled,
     }
 
-    #[derive(Clone)]
+    #[derive(Clone, Builder)]
     pub struct ProductId {
         base_id: BaseId<uuid::Uuid>,
     }
 
-    #[derive(Clone)]
+    #[derive(Clone, Builder)]
     pub struct RestaurantId {
         base_id: BaseId<uuid::Uuid>,
     }
@@ -95,7 +99,7 @@ pub mod value_object {
             }
         }
 
-        const ZERO: Money = Money { amount: 0.0 };
+        pub const ZERO: Money = Money { amount: 0.0 };
     }
 }
 

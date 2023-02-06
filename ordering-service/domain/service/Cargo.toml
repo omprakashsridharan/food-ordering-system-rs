@@ -1,12 +1,12 @@
 [package]
-name = "common"
+name = "service"
 version = "0.1.0"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
-
 [dependencies]
 uuid = { workspace = true }
-thiserror = { workspace = true }
-derive_builder = { workspace = true }
+common = { path = "../../../common" }
+chrono = { workspace = true }
+core = { path = "../core" }

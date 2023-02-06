@@ -8,3 +8,4 @@ edition = "2021"
 [dependencies]
 common = { path = "../../../common" }
 uuid = { workspace = true }
+derive_builder = { workspace = true }

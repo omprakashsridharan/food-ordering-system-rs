@@ -2,11 +2,15 @@ use common::error::OrderDomainError;
 use entity::{Order, Restaurant};
 use event::{OrderCancelled, OrderCreated, OrderPaid};
 
-mod entity {
-    use common::entity::{AggregateRoot, BaseEntity};
+pub mod entity {
+    use common::entity::{AggregateRoot, BaseEntity, BaseEntityBuilder};
     use common::error::OrderDomainError;
     use common::value_object::money::Money;
-    use common::value_object::{CustomerId, OrderId, OrderStatus, ProductId, RestaurantId};
+    use common::value_object::{
+        BaseId, BaseIdBuilder, CustomerId, OrderId, OrderStatus, ProductId, ProductIdBuilder,
+        RestaurantId, RestaurantIdBuilder,
+    };
+    use derive_builder::Builder;
 
     use crate::value_object::{OrderItemId, StreetAddress, TrackingId};
 
@@ -15,11 +19,29 @@ mod entity {
         aggregate_root: AggregateRoot<CustomerId>,
     }
 
-    #[derive(Clone)]
+    #[derive(Clone, Builder)]
     pub struct Product {
         base_entity: BaseEntity<ProductId>,
         pub name: String,
         pub price: Money,
+    }
+
+    impl Product {
+        pub fn new(product_id: uuid::Uuid, name: String, price: Money) -> Self {
+            let base_id: BaseId<uuid::Uuid> =
+                BaseIdBuilder::default().value(product_id).build().unwrap();
+            let product_id: ProductId = ProductIdBuilder::default()
+                .base_id(base_id)
+                .build()
+                .unwrap();
+            let base_entity: BaseEntity<ProductId> =
+                BaseEntityBuilder::default().id(product_id).build().unwrap();
+            Self {
+                base_entity,
+                name,
+                price,
+            }
+        }
     }
 
     impl PartialEq for Product {
@@ -28,7 +50,7 @@ mod entity {
         }
     }
 
-    #[derive(Clone)]
+    #[derive(Clone, Builder)]
     pub struct Restaurant {
         base_entity: BaseEntity<RestaurantId>,
         pub products: Vec<Product>,
@@ -38,6 +60,26 @@ mod entity {
     impl Restaurant {
         pub fn is_active(&self) -> bool {
             return self.active;
+        }
+
+        pub fn new(restaurant_id: uuid::Uuid, products: Vec<Product>, active: bool) -> Self {
+            let base_id: BaseId<uuid::Uuid> = BaseIdBuilder::default()
+                .value(restaurant_id)
+                .build()
+                .unwrap();
+            let restaurant_id: RestaurantId = RestaurantIdBuilder::default()
+                .base_id(base_id)
+                .build()
+                .unwrap();
+            let base_entity: BaseEntity<RestaurantId> = BaseEntityBuilder::default()
+                .id(restaurant_id)
+                .build()
+                .unwrap();
+            Self {
+                base_entity,
+                products,
+                active,
+            }
         }
     }
 
