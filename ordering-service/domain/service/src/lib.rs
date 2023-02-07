@@ -14,6 +14,7 @@ mod dto {
                 CustomerId, OrderStatus, RestaurantId,
             },
         };
+        use derive_builder::Builder;
 
         pub struct OrderAddress {
             street: String,
@@ -114,6 +115,7 @@ mod dto {
             }
         }
 
+        #[derive(Clone, Builder)]
         pub struct CreateOrderResponse {
             order_tracking_id: uuid::Uuid,
             order_status: OrderStatus,
@@ -150,11 +152,13 @@ mod dto {
 
     mod track {
         use common::value_object::OrderStatus;
+        use derive_builder::Builder;
 
         pub struct TrackOrderQuery {
             order_tracking_id: uuid::Uuid,
         }
 
+        #[derive(Clone, Builder)]
         pub struct TrackOrderResponse {
             order_tracking_id: uuid::Uuid,
             order_status: OrderStatus,

@@ -10,3 +10,4 @@ uuid = { workspace = true }
 common = { path = "../../../common" }
 chrono = { workspace = true }
 core = { path = "../core" }
+derive_builder = { workspace = true }

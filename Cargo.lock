@@ -374,6 +374,7 @@ dependencies = [
  "chrono",
  "common",
  "core",
+ "derive_builder",
  "uuid",
 ]
 

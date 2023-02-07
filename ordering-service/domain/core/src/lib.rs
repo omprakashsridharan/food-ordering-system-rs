@@ -104,8 +104,8 @@ pub mod entity {
         street_address: StreetAddress,
         price: Money,
         pub items: Vec<OrderItem>,
-        tracking_id: TrackingId,
-        order_status: OrderStatus,
+        pub tracking_id: TrackingId,
+        pub order_status: OrderStatus,
         failure_messages: Vec<String>,
     }
 
