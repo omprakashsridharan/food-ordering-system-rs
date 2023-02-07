@@ -25,6 +25,14 @@ pub mod value_object {
         base_id: BaseId<uuid::Uuid>,
     }
 
+    impl From<uuid::Uuid> for CustomerId {
+        fn from(id: uuid::Uuid) -> Self {
+            Self {
+                base_id: BaseIdBuilder::default().value(id).build().unwrap(),
+            }
+        }
+    }
+
     #[derive(Clone)]
     pub enum OrderApprovalStatus {
         Approved,
@@ -34,6 +42,14 @@ pub mod value_object {
     #[derive(Clone)]
     pub struct OrderId {
         base_id: BaseId<uuid::Uuid>,
+    }
+
+    impl From<uuid::Uuid> for OrderId {
+        fn from(id: uuid::Uuid) -> Self {
+            Self {
+                base_id: BaseIdBuilder::default().value(id).build().unwrap(),
+            }
+        }
     }
 
     #[derive(Clone, PartialEq)]
@@ -57,9 +73,25 @@ pub mod value_object {
         base_id: BaseId<uuid::Uuid>,
     }
 
+    impl From<uuid::Uuid> for ProductId {
+        fn from(id: uuid::Uuid) -> Self {
+            Self {
+                base_id: BaseIdBuilder::default().value(id).build().unwrap(),
+            }
+        }
+    }
+
     #[derive(Clone, Builder)]
     pub struct RestaurantId {
         base_id: BaseId<uuid::Uuid>,
+    }
+
+    impl From<uuid::Uuid> for RestaurantId {
+        fn from(id: uuid::Uuid) -> Self {
+            Self {
+                base_id: BaseIdBuilder::default().value(id).build().unwrap(),
+            }
+        }
     }
 
     pub mod money {

@@ -7,8 +7,8 @@ pub mod entity {
     use common::error::OrderDomainError;
     use common::value_object::money::Money;
     use common::value_object::{
-        BaseId, BaseIdBuilder, CustomerId, OrderId, OrderStatus, ProductId, ProductIdBuilder,
-        RestaurantId, RestaurantIdBuilder,
+        BaseId, BaseIdBuilder, CustomerId, OrderId, OrderStatus, ProductId, RestaurantId,
+        RestaurantIdBuilder,
     };
     use derive_builder::Builder;
 
@@ -28,12 +28,7 @@ pub mod entity {
 
     impl Product {
         pub fn new(product_id: uuid::Uuid, name: String, price: Money) -> Self {
-            let base_id: BaseId<uuid::Uuid> =
-                BaseIdBuilder::default().value(product_id).build().unwrap();
-            let product_id: ProductId = ProductIdBuilder::default()
-                .base_id(base_id)
-                .build()
-                .unwrap();
+            let product_id: ProductId = product_id.into();
             let base_entity: BaseEntity<ProductId> =
                 BaseEntityBuilder::default().id(product_id).build().unwrap();
             Self {
@@ -83,10 +78,10 @@ pub mod entity {
         }
     }
 
-    #[derive(Clone)]
+    #[derive(Clone, Builder)]
     pub struct OrderItem {
         base_entity: BaseEntity<OrderItemId>,
-        order_id: OrderId,
+        pub order_id: OrderId,
         pub product: Product,
         quantity: u64,
         price: Money,
@@ -101,7 +96,7 @@ pub mod entity {
         }
     }
 
-    #[derive(Clone)]
+    #[derive(Clone, Builder)]
     pub struct Order {
         aggregate_root: AggregateRoot<OrderId>,
         customer_id: CustomerId,
@@ -188,15 +183,25 @@ pub mod entity {
     }
 }
 
-mod value_object {
-    use common::value_object::BaseId;
+pub mod value_object {
+    use common::value_object::{BaseId, BaseIdBuilder};
+    use derive_builder::Builder;
 
-    #[derive(Clone)]
+    #[derive(Clone, Builder)]
     pub struct OrderItemId {
         base_id: BaseId<i64>,
     }
 
-    #[derive(Clone)]
+    impl From<i64> for OrderItemId {
+        fn from(id: i64) -> Self {
+            return OrderItemIdBuilder::default()
+                .base_id(BaseIdBuilder::default().value(id).build().unwrap())
+                .build()
+                .unwrap();
+        }
+    }
+
+    #[derive(Clone, Builder)]
     pub struct StreetAddress {
         id: uuid::Uuid,
         street: String,
@@ -207,6 +212,14 @@ mod value_object {
     #[derive(Clone)]
     pub struct TrackingId {
         base_id: BaseId<uuid::Uuid>,
+    }
+
+    impl From<uuid::Uuid> for TrackingId {
+        fn from(id: uuid::Uuid) -> Self {
+            return Self {
+                base_id: BaseIdBuilder::default().value(id).build().unwrap(),
+            };
+        }
     }
 }
 
