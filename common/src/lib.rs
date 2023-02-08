@@ -135,6 +135,18 @@ pub mod value_object {
     }
 }
 
+pub mod event {
+    pub mod publisher {
+        use super::DomainEvent;
+
+        pub trait DomainEventPublisher<E, T: DomainEvent<E>> {
+            fn publish(event: T);
+        }
+    }
+
+    pub trait DomainEvent<T> {}
+}
+
 pub mod error {
     use thiserror::Error;
 

@@ -224,16 +224,24 @@ pub mod value_object {
 }
 
 pub mod event {
+
+    use common::event::DomainEvent;
+
     use crate::entity::Order;
 
     #[derive(Clone)]
     pub struct OrderCreated(pub Order);
 
+    impl DomainEvent<Order> for OrderCreated {}
+
     #[derive(Clone)]
     pub struct OrderCancelled(pub Order);
 
+    impl DomainEvent<Order> for OrderCancelled {}
+
     #[derive(Clone)]
     pub struct OrderPaid(pub Order);
+    impl DomainEvent<Order> for OrderPaid {}
 }
 
 pub trait OrderDomainService {

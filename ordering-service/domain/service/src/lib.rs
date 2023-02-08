@@ -1,5 +1,5 @@
-mod dto {
-    mod create {
+pub mod dto {
+    pub mod create {
         use core::{
             entity::{
                 OrderBuilder, OrderItem as OrderItemEntity, OrderItemBuilder, Product, Restaurant,
@@ -123,7 +123,7 @@ mod dto {
         }
     }
 
-    mod message {
+    pub mod message {
         use chrono::prelude::*;
         use common::value_object::{OrderApprovalStatus, PaymentStatus};
 
@@ -150,7 +150,7 @@ mod dto {
         }
     }
 
-    mod track {
+    pub mod track {
         use common::value_object::OrderStatus;
         use derive_builder::Builder;
 
@@ -163,6 +163,105 @@ mod dto {
             order_tracking_id: uuid::Uuid,
             order_status: OrderStatus,
             failure_messages: Vec<String>,
+        }
+    }
+}
+
+pub mod ports {
+    pub mod input {
+        pub mod message {
+            pub mod listener {
+                pub mod payment {
+                    use crate::dto::message::PaymentResponse;
+
+                    pub trait PaymentResponseListener {
+                        fn payment_completed(response: PaymentResponse);
+                        fn payment_cancelled(response: PaymentResponse);
+                    }
+                }
+
+                pub mod restaurany {
+                    use crate::dto::message::RestaurantApprovalResponse;
+                    pub trait RestaurantApprovalResponseMessageListener {
+                        fn order_approved(response: RestaurantApprovalResponse);
+                        fn order_rejected(response: RestaurantApprovalResponse);
+                    }
+                }
+            }
+        }
+
+        pub mod service {
+            use common::error::OrderDomainError;
+
+            use crate::dto::{
+                create::{CreateOrderCommand, CreateOrderResponse},
+                track::{TrackOrderQuery, TrackOrderResponse},
+            };
+
+            pub trait OrderApplicationService {
+                fn create_order(
+                    command: CreateOrderCommand,
+                ) -> Result<CreateOrderResponse, OrderDomainError>;
+                fn track_order(
+                    query: TrackOrderQuery,
+                ) -> Result<TrackOrderResponse, OrderDomainError>;
+            }
+        }
+    }
+
+    pub mod output {
+        pub mod message {
+            pub mod publisher {
+                pub mod payment {
+                    use core::{
+                        entity::Order,
+                        event::{OrderCancelled, OrderCreated},
+                    };
+
+                    use common::event::publisher::DomainEventPublisher;
+
+                    pub trait OrderCancelledPaymentRequestMessagePublisher:
+                        DomainEventPublisher<Order, OrderCancelled>
+                    {
+                    }
+
+                    pub trait OrderCreatedPaymentRequestMessagePublisher:
+                        DomainEventPublisher<Order, OrderCreated>
+                    {
+                    }
+                }
+
+                pub mod restaurant_approval {
+                    use core::{entity::Order, event::OrderPaid};
+
+                    use common::event::publisher::DomainEventPublisher;
+
+                    pub trait OrderPaidRestaurantRequestMessagePublisher:
+                        DomainEventPublisher<Order, OrderPaid>
+                    {
+                    }
+                }
+            }
+        }
+
+        pub mod repository {
+            use core::{
+                entity::{Customer, Order, Restaurant},
+                value_object::TrackingId,
+            };
+
+            pub trait OrderRepository {
+                fn save(order: Order) -> (bool, Order);
+                fn find_by_tracking_id(id: TrackingId) -> (bool, Order);
+            }
+
+            pub trait CustomerRepository {
+                fn find_customer(customer_id: uuid::Uuid) -> (bool, Customer);
+            }
+
+            pub trait RestaurantRepository {
+                fn find_restaurant_info(restaurant: Restaurant) -> (bool, Restaurant);
+            }
         }
     }
 }
