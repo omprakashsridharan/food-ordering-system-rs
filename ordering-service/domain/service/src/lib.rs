@@ -1,3 +1,12 @@
+use core::{event::OrderCreated, OrderDomainService};
+
+use common::error::OrderDomainError;
+use dto::create::CreateOrderCommand;
+use ports::{
+    input::service::OrderApplicationService,
+    output::repository::{CustomerRepository, OrderRepository, RestaurantRepository},
+};
+
 pub mod dto {
     pub mod create {
         use core::{
@@ -200,9 +209,11 @@ pub mod ports {
 
             pub trait OrderApplicationService {
                 fn create_order(
+                    &self,
                     command: CreateOrderCommand,
                 ) -> Result<CreateOrderResponse, OrderDomainError>;
                 fn track_order(
+                    &self,
                     query: TrackOrderQuery,
                 ) -> Result<TrackOrderResponse, OrderDomainError>;
             }
@@ -256,12 +267,61 @@ pub mod ports {
             }
 
             pub trait CustomerRepository {
-                fn find_customer(customer_id: uuid::Uuid) -> (bool, Customer);
+                fn find_customer(&self, customer_id: uuid::Uuid) -> (bool, Customer);
             }
 
             pub trait RestaurantRepository {
                 fn find_restaurant_info(restaurant: Restaurant) -> (bool, Restaurant);
             }
         }
+    }
+}
+
+pub struct OrderCreateHelper<
+    ODS: OrderDomainService,
+    OR: OrderRepository,
+    CR: CustomerRepository,
+    RR: RestaurantRepository,
+> {
+    order_domain_service: ODS,
+    order_repository: OR,
+    customer_repository: CR,
+    restaurant_repository: RR,
+}
+
+impl<
+        ODS: OrderDomainService,
+        OR: OrderRepository,
+        CR: CustomerRepository,
+        RR: RestaurantRepository,
+    > OrderCreateHelper<ODS, OR, CR, RR>
+{
+    pub fn persist_order(&self, command: CreateOrderCommand) -> OrderCreated {}
+
+    pub fn check_customer(&self, customer_id: uuid::Uuid) -> Result<(), OrderDomainError> {
+        let (ok, _) = self.customer_repository.find_customer(customer_id);
+        if !ok {
+            return Err(OrderDomainError::CustomerNotFound);
+        } else {
+            Ok(())
+        }
+    }
+}
+
+pub struct OrderApplicationServiceImpl {}
+
+impl OrderApplicationService for OrderApplicationServiceImpl {
+    fn create_order(
+        &self,
+        command: dto::create::CreateOrderCommand,
+    ) -> Result<dto::create::CreateOrderResponse, common::error::OrderDomainError> {
+        todo!()
+    }
+
+    fn track_order(
+        &self,
+        query: dto::track::TrackOrderQuery,
+    ) -> Result<dto::track::TrackOrderResponse, common::error::OrderDomainError> {
+        todo!()
     }
 }

@@ -162,5 +162,7 @@ pub mod error {
         InvalidOrderStatus(String),
         #[error("inactive restaurant")]
         InactiveRestaurant,
+        #[error("customer not found")]
+        CustomerNotFound,
     }
 }
