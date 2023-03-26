@@ -106,7 +106,7 @@ pub mod entity {
         pub items: Vec<OrderItem>,
         pub tracking_id: TrackingId,
         pub order_status: OrderStatus,
-        failure_messages: Vec<String>,
+        pub failure_messages: Vec<String>,
     }
 
     impl Order {

@@ -169,5 +169,7 @@ pub mod error {
         RestaurantNotFound,
         #[error("could not save order")]
         SaveOrderError,
+        #[error("order not found")]
+        OrderNotFound,
     }
 }

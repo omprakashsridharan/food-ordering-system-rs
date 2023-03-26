@@ -1,11 +1,15 @@
 use domain_core::{
     entity::{Order, Restaurant},
     event::OrderCreated,
+    value_object::TrackingId,
     OrderDomainService,
 };
 
 use common::error::OrderDomainError;
-use dto::create::{CreateOrderCommand, CreateOrderResponse};
+use dto::{
+    create::{CreateOrderCommand, CreateOrderResponse},
+    track::{TrackOrderQuery, TrackOrderResponse},
+};
 use ports::{
     input::service::OrderApplicationService,
     output::{
@@ -184,9 +188,10 @@ pub mod dto {
     pub mod track {
         use common::value_object::OrderStatus;
         use derive_builder::Builder;
+        use domain_core::entity::Order;
 
         pub struct TrackOrderQuery {
-            order_tracking_id: uuid::Uuid,
+            pub order_tracking_id: uuid::Uuid,
         }
 
         #[derive(Clone, Builder)]
@@ -194,6 +199,16 @@ pub mod dto {
             order_tracking_id: uuid::Uuid,
             order_status: OrderStatus,
             failure_messages: Vec<String>,
+        }
+
+        impl From<Order> for TrackOrderResponse {
+            fn from(o: Order) -> Self {
+                Self {
+                    order_tracking_id: o.tracking_id.into(),
+                    order_status: o.order_status,
+                    failure_messages: o.failure_messages,
+                }
+            }
         }
     }
 }
@@ -403,6 +418,25 @@ impl<
     }
 }
 
+pub struct OrderTrackCommandHandler<OR: OrderRepository> {
+    order_repository: OR,
+}
+
+impl<OR: OrderRepository> OrderTrackCommandHandler<OR> {
+    pub async fn track_order(
+        &self,
+        query: TrackOrderQuery,
+    ) -> Result<TrackOrderResponse, OrderDomainError> {
+        let tracking_id: TrackingId = query.order_tracking_id.into();
+        let (ok, order) = self.order_repository.find_by_tracking_id(tracking_id).await;
+        if !ok {
+            Err(OrderDomainError::OrderNotFound)
+        } else {
+            Ok(order.into())
+        }
+    }
+}
+
 pub struct OrderApplicationServiceImpl<
     OCPRMP: OrderCreatedPaymentRequestMessagePublisher,
     ODS: OrderDomainService,
@@ -411,6 +445,7 @@ pub struct OrderApplicationServiceImpl<
     RR: RestaurantRepository,
 > {
     order_create_command_helper: OrderCreateCommandHandler<OCPRMP, ODS, OR, CR, RR>,
+    order_track_comman_helper: OrderTrackCommandHandler<OR>,
 }
 
 #[async_trait::async_trait]
@@ -433,6 +468,6 @@ impl<
         &self,
         query: dto::track::TrackOrderQuery,
     ) -> Result<dto::track::TrackOrderResponse, common::error::OrderDomainError> {
-        todo!()
+        self.order_track_comman_helper.track_order(query).await
     }
 }
