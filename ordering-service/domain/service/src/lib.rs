@@ -1,4 +1,8 @@
-use core::{event::OrderCreated, OrderDomainService};
+use domain_core::{
+    entity::{Order, Restaurant},
+    event::OrderCreated,
+    OrderDomainService,
+};
 
 use common::error::OrderDomainError;
 use dto::create::CreateOrderCommand;
@@ -9,7 +13,7 @@ use ports::{
 
 pub mod dto {
     pub mod create {
-        use core::{
+        use domain_core::{
             entity::{
                 OrderBuilder, OrderItem as OrderItemEntity, OrderItemBuilder, Product, Restaurant,
             },
@@ -25,6 +29,7 @@ pub mod dto {
         };
         use derive_builder::Builder;
 
+        #[derive(Clone)]
         pub struct OrderAddress {
             street: String,
             postal_code: String,
@@ -43,6 +48,7 @@ pub mod dto {
             }
         }
 
+        #[derive(Clone)]
         pub struct OrderItem {
             product_id: uuid::Uuid,
             quantity: u64,
@@ -73,16 +79,18 @@ pub mod dto {
                     .unwrap()
             }
         }
+
+        #[derive(Clone)]
         pub struct CreateOrderCommand {
-            customer_id: uuid::Uuid,
-            restaurant_id: uuid::Uuid,
-            price: f64,
-            order_address: OrderAddress,
-            items: Vec<OrderItem>,
+            pub customer_id: uuid::Uuid,
+            pub restaurant_id: uuid::Uuid,
+            pub price: f64,
+            pub order_address: OrderAddress,
+            pub items: Vec<OrderItem>,
         }
 
-        impl Into<core::entity::Restaurant> for CreateOrderCommand {
-            fn into(self) -> core::entity::Restaurant {
+        impl Into<domain_core::entity::Restaurant> for CreateOrderCommand {
+            fn into(self) -> domain_core::entity::Restaurant {
                 let products: Vec<Product> = self
                     .items
                     .iter()
@@ -92,8 +100,8 @@ pub mod dto {
             }
         }
 
-        impl Into<core::entity::Order> for CreateOrderCommand {
-            fn into(self) -> core::entity::Order {
+        impl Into<domain_core::entity::Order> for CreateOrderCommand {
+            fn into(self) -> domain_core::entity::Order {
                 let customer_id: CustomerId = self.customer_id.into();
                 let restaurant_id: RestaurantId = self.restaurant_id.into();
                 let delivery_address: StreetAddress = self.order_address.into();
@@ -224,7 +232,7 @@ pub mod ports {
         pub mod message {
             pub mod publisher {
                 pub mod payment {
-                    use core::{
+                    use domain_core::{
                         entity::Order,
                         event::{OrderCancelled, OrderCreated},
                     };
@@ -243,7 +251,7 @@ pub mod ports {
                 }
 
                 pub mod restaurant_approval {
-                    use core::{entity::Order, event::OrderPaid};
+                    use domain_core::{entity::Order, event::OrderPaid};
 
                     use common::event::publisher::DomainEventPublisher;
 
@@ -256,22 +264,25 @@ pub mod ports {
         }
 
         pub mod repository {
-            use core::{
+            use domain_core::{
                 entity::{Customer, Order, Restaurant},
                 value_object::TrackingId,
             };
 
+            #[async_trait::async_trait]
             pub trait OrderRepository {
-                fn save(order: Order) -> (bool, Order);
-                fn find_by_tracking_id(id: TrackingId) -> (bool, Order);
+                async fn save(&self, order: Order) -> (bool, Order);
+                async fn find_by_tracking_id(&self, id: TrackingId) -> (bool, Order);
             }
 
+            #[async_trait::async_trait]
             pub trait CustomerRepository {
-                fn find_customer(&self, customer_id: uuid::Uuid) -> (bool, Customer);
+                async fn find_customer(&self, customer_id: uuid::Uuid) -> (bool, Customer);
             }
 
+            #[async_trait::async_trait]
             pub trait RestaurantRepository {
-                fn find_restaurant_info(restaurant: Restaurant) -> (bool, Restaurant);
+                async fn find_restaurant_info(&self, restaurant: Restaurant) -> (bool, Restaurant);
             }
         }
     }
@@ -296,14 +307,50 @@ impl<
         RR: RestaurantRepository,
     > OrderCreateHelper<ODS, OR, CR, RR>
 {
-    pub fn persist_order(&self, command: CreateOrderCommand) -> OrderCreated {}
+    pub async fn persist_order(
+        &self,
+        command: CreateOrderCommand,
+    ) -> Result<OrderCreated, OrderDomainError> {
+        self.check_customer(command.customer_id).await?;
+        let restaurant = self.check_restaurant(command.clone()).await?;
+        let order: Order = command.into();
+        let order_created_event = self
+            .order_domain_service
+            .validate_and_initiate_order(order, restaurant)?;
+        Ok(order_created_event)
+    }
 
-    pub fn check_customer(&self, customer_id: uuid::Uuid) -> Result<(), OrderDomainError> {
-        let (ok, _) = self.customer_repository.find_customer(customer_id);
+    pub async fn check_customer(&self, customer_id: uuid::Uuid) -> Result<(), OrderDomainError> {
+        let (ok, _) = self.customer_repository.find_customer(customer_id).await;
         if !ok {
             return Err(OrderDomainError::CustomerNotFound);
         } else {
             Ok(())
+        }
+    }
+
+    pub async fn check_restaurant(
+        &self,
+        command: CreateOrderCommand,
+    ) -> Result<Restaurant, OrderDomainError> {
+        let restaurant: Restaurant = command.into();
+        let (ok, _) = self
+            .restaurant_repository
+            .find_restaurant_info(restaurant.clone())
+            .await;
+        if !ok {
+            return Err(OrderDomainError::RestaurantNotFound);
+        } else {
+            Ok(restaurant)
+        }
+    }
+
+    pub async fn save_order(&self, order: Order) -> Result<Order, OrderDomainError> {
+        let (ok, o) = self.order_repository.save(order).await;
+        if !ok {
+            return Err(OrderDomainError::SaveOrderError);
+        } else {
+            Ok(o)
         }
     }
 }

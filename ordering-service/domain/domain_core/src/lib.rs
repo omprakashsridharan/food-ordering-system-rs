@@ -246,6 +246,7 @@ pub mod event {
 
 pub trait OrderDomainService {
     fn validate_and_initiate_order(
+        &self,
         order: Order,
         restaurant: Restaurant,
     ) -> Result<event::OrderCreated, OrderDomainError>;
@@ -266,6 +267,7 @@ pub struct OrderDomainServiceImpl {}
 
 impl OrderDomainService for OrderDomainServiceImpl {
     fn validate_and_initiate_order(
+        &self,
         mut order: Order,
         restaurant: Restaurant,
     ) -> Result<event::OrderCreated, OrderDomainError> {

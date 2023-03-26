@@ -1,5 +1,5 @@
 [package]
-name = "core"
+name = "domain_core"
 version = "0.1.0"
 edition = "2021"
 
@@ -9,3 +9,4 @@ edition = "2021"
 common = { path = "../../../common" }
 uuid = { workspace = true }
 derive_builder = { workspace = true }
+async-trait = { workspace = true }

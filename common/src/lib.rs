@@ -164,5 +164,9 @@ pub mod error {
         InactiveRestaurant,
         #[error("customer not found")]
         CustomerNotFound,
+        #[error("restaurant not found")]
+        RestaurantNotFound,
+        #[error("could not save order")]
+        SaveOrderError,
     }
 }

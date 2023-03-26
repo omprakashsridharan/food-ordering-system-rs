@@ -9,5 +9,6 @@ edition = "2021"
 uuid = { workspace = true }
 common = { path = "../../../common" }
 chrono = { workspace = true }
-core = { path = "../core" }
+domain_core = { path = "../domain_core" }
 derive_builder = { workspace = true }
+async-trait = { workspace = true }
