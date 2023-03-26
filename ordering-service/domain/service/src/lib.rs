@@ -5,17 +5,21 @@ use domain_core::{
 };
 
 use common::error::OrderDomainError;
-use dto::create::CreateOrderCommand;
+use dto::create::{CreateOrderCommand, CreateOrderResponse};
 use ports::{
     input::service::OrderApplicationService,
-    output::repository::{CustomerRepository, OrderRepository, RestaurantRepository},
+    output::{
+        message::publisher::payment::OrderCreatedPaymentRequestMessagePublisher,
+        repository::{CustomerRepository, OrderRepository, RestaurantRepository},
+    },
 };
 
 pub mod dto {
     pub mod create {
         use domain_core::{
             entity::{
-                OrderBuilder, OrderItem as OrderItemEntity, OrderItemBuilder, Product, Restaurant,
+                Order, OrderBuilder, OrderItem as OrderItemEntity, OrderItemBuilder, Product,
+                Restaurant,
             },
             value_object::{OrderItemId, StreetAddress, StreetAddressBuilder, TrackingId},
         };
@@ -138,6 +142,16 @@ pub mod dto {
             order_status: OrderStatus,
             message: String,
         }
+
+        impl From<Order> for CreateOrderResponse {
+            fn from(o: Order) -> Self {
+                Self {
+                    order_tracking_id: o.tracking_id.into(),
+                    order_status: o.order_status,
+                    message: "Order created successfully".to_string(),
+                }
+            }
+        }
     }
 
     pub mod message {
@@ -215,12 +229,13 @@ pub mod ports {
                 track::{TrackOrderQuery, TrackOrderResponse},
             };
 
-            pub trait OrderApplicationService {
-                fn create_order(
+            #[async_trait::async_trait]
+            pub trait OrderApplicationService: std::marker::Sync {
+                async fn create_order(
                     &self,
                     command: CreateOrderCommand,
                 ) -> Result<CreateOrderResponse, OrderDomainError>;
-                fn track_order(
+                async fn track_order(
                     &self,
                     query: TrackOrderQuery,
                 ) -> Result<TrackOrderResponse, OrderDomainError>;
@@ -244,6 +259,7 @@ pub mod ports {
                     {
                     }
 
+                    #[async_trait::async_trait]
                     pub trait OrderCreatedPaymentRequestMessagePublisher:
                         DomainEventPublisher<Order, OrderCreated>
                     {
@@ -270,18 +286,18 @@ pub mod ports {
             };
 
             #[async_trait::async_trait]
-            pub trait OrderRepository {
+            pub trait OrderRepository: Send + Sync {
                 async fn save(&self, order: Order) -> (bool, Order);
                 async fn find_by_tracking_id(&self, id: TrackingId) -> (bool, Order);
             }
 
             #[async_trait::async_trait]
-            pub trait CustomerRepository {
+            pub trait CustomerRepository: Send + Sync {
                 async fn find_customer(&self, customer_id: uuid::Uuid) -> (bool, Customer);
             }
 
             #[async_trait::async_trait]
-            pub trait RestaurantRepository {
+            pub trait RestaurantRepository: Send + Sync {
                 async fn find_restaurant_info(&self, restaurant: Restaurant) -> (bool, Restaurant);
             }
         }
@@ -355,17 +371,65 @@ impl<
     }
 }
 
-pub struct OrderApplicationServiceImpl {}
+pub struct OrderCreateCommandHandler<
+    OCPRMP: OrderCreatedPaymentRequestMessagePublisher,
+    ODS: OrderDomainService,
+    OR: OrderRepository,
+    CR: CustomerRepository,
+    RR: RestaurantRepository,
+> {
+    order_create_helper: OrderCreateHelper<ODS, OR, CR, RR>,
+    order_created_payment_request_message_publisher: OCPRMP,
+}
 
-impl OrderApplicationService for OrderApplicationServiceImpl {
-    fn create_order(
+impl<
+        OCPRMP: OrderCreatedPaymentRequestMessagePublisher,
+        ODS: OrderDomainService,
+        OR: OrderRepository,
+        CR: CustomerRepository,
+        RR: RestaurantRepository,
+    > OrderCreateCommandHandler<OCPRMP, ODS, OR, CR, RR>
+{
+    pub async fn create_order(
+        &self,
+        command: CreateOrderCommand,
+    ) -> Result<CreateOrderResponse, OrderDomainError> {
+        let order_created_event = self.order_create_helper.persist_order(command).await?;
+        self.order_created_payment_request_message_publisher
+            .publish(order_created_event.clone())
+            .await;
+        let create_order_response: CreateOrderResponse = order_created_event.0.into();
+        Ok(create_order_response)
+    }
+}
+
+pub struct OrderApplicationServiceImpl<
+    OCPRMP: OrderCreatedPaymentRequestMessagePublisher,
+    ODS: OrderDomainService,
+    OR: OrderRepository,
+    CR: CustomerRepository,
+    RR: RestaurantRepository,
+> {
+    order_create_command_helper: OrderCreateCommandHandler<OCPRMP, ODS, OR, CR, RR>,
+}
+
+#[async_trait::async_trait]
+impl<
+        OCPRMP: OrderCreatedPaymentRequestMessagePublisher,
+        ODS: OrderDomainService,
+        OR: OrderRepository,
+        CR: CustomerRepository,
+        RR: RestaurantRepository,
+    > OrderApplicationService for OrderApplicationServiceImpl<OCPRMP, ODS, OR, CR, RR>
+{
+    async fn create_order(
         &self,
         command: dto::create::CreateOrderCommand,
     ) -> Result<dto::create::CreateOrderResponse, common::error::OrderDomainError> {
-        todo!()
+        self.order_create_command_helper.create_order(command).await
     }
 
-    fn track_order(
+    async fn track_order(
         &self,
         query: dto::track::TrackOrderQuery,
     ) -> Result<dto::track::TrackOrderResponse, common::error::OrderDomainError> {

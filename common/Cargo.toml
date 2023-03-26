@@ -10,3 +10,4 @@ edition = "2021"
 uuid = { workspace = true }
 thiserror = { workspace = true }
 derive_builder = { workspace = true }
+async-trait = { workspace = true }

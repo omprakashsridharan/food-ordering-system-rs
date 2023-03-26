@@ -221,6 +221,12 @@ pub mod value_object {
             };
         }
     }
+
+    impl Into<uuid::Uuid> for TrackingId {
+        fn into(self) -> uuid::Uuid {
+            return self.base_id.value;
+        }
+    }
 }
 
 pub mod event {
@@ -244,7 +250,7 @@ pub mod event {
     impl DomainEvent<Order> for OrderPaid {}
 }
 
-pub trait OrderDomainService {
+pub trait OrderDomainService: Send + Sync {
     fn validate_and_initiate_order(
         &self,
         order: Order,

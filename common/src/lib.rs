@@ -17,7 +17,7 @@ pub mod value_object {
 
     #[derive(Clone, Builder)]
     pub struct BaseId<V: Clone> {
-        value: V,
+        pub value: V,
     }
 
     #[derive(Clone)]
@@ -139,8 +139,9 @@ pub mod event {
     pub mod publisher {
         use super::DomainEvent;
 
-        pub trait DomainEventPublisher<E, T: DomainEvent<E>> {
-            fn publish(event: T);
+        #[async_trait::async_trait]
+        pub trait DomainEventPublisher<E, T: DomainEvent<E>>: Send + Sync {
+            async fn publish(&self, event: T);
         }
     }
 
