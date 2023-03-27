@@ -8,10 +8,16 @@ use domain_core::{
 use common::error::OrderDomainError;
 use dto::{
     create::{CreateOrderCommand, CreateOrderResponse},
+    message::RestaurantApprovalResponse,
     track::{TrackOrderQuery, TrackOrderResponse},
 };
 use ports::{
-    input::service::OrderApplicationService,
+    input::{
+        message::listener::{
+            payment::PaymentResponseListener, restaurant::RestaurantApprovalResponseMessageListener,
+        },
+        service::OrderApplicationService,
+    },
     output::{
         message::publisher::payment::OrderCreatedPaymentRequestMessagePublisher,
         repository::{CustomerRepository, OrderRepository, RestaurantRepository},
@@ -220,17 +226,20 @@ pub mod ports {
                 pub mod payment {
                     use crate::dto::message::PaymentResponse;
 
+                    #[async_trait::async_trait]
                     pub trait PaymentResponseListener {
-                        fn payment_completed(response: PaymentResponse);
-                        fn payment_cancelled(response: PaymentResponse);
+                        async fn payment_completed(&self, response: PaymentResponse);
+                        async fn payment_cancelled(&self, response: PaymentResponse);
                     }
                 }
 
-                pub mod restaurany {
+                pub mod restaurant {
                     use crate::dto::message::RestaurantApprovalResponse;
+
+                    #[async_trait::async_trait]
                     pub trait RestaurantApprovalResponseMessageListener {
-                        fn order_approved(response: RestaurantApprovalResponse);
-                        fn order_rejected(response: RestaurantApprovalResponse);
+                        async fn order_approved(&self, response: RestaurantApprovalResponse);
+                        async fn order_rejected(&self, response: RestaurantApprovalResponse);
                     }
                 }
             }
@@ -470,4 +479,25 @@ impl<
     ) -> Result<dto::track::TrackOrderResponse, common::error::OrderDomainError> {
         self.order_track_comman_helper.track_order(query).await
     }
+}
+
+pub struct PaymentResponseMessageListenerImpl {}
+
+#[async_trait::async_trait]
+impl PaymentResponseListener for PaymentResponseMessageListenerImpl {
+    async fn payment_completed(&self, response: dto::message::PaymentResponse) {
+        todo!()
+    }
+
+    async fn payment_cancelled(&self, response: dto::message::PaymentResponse) {
+        todo!()
+    }
+}
+
+pub struct RestaurantApprovalResponseMessageListenerImpl {}
+
+#[async_trait::async_trait]
+impl RestaurantApprovalResponseMessageListener for RestaurantApprovalResponseMessageListenerImpl {
+    async fn order_approved(&self, response: RestaurantApprovalResponse) {}
+    async fn order_rejected(&self, response: RestaurantApprovalResponse) {}
 }
