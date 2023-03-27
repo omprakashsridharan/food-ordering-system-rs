@@ -1,1 +1,13 @@
 /target
+
+infrastructure/docker-compose/volumes/kafka/broker-1/*
+!infrastructure/docker-compose/volumes/kafka/broker-1/.keep
+infrastructure/docker-compose/volumes/kafka/broker-2/*
+!infrastructure/docker-compose/volumes/kafka/broker-2/.keep
+infrastructure/docker-compose/volumes/kafka/broker-3/*
+!infrastructure/docker-compose/volumes/kafka/broker-3/.keep
+
+infrastructure/docker-compose/volumes/zookeeper/data/*
+!infrastructure/docker-compose/volumes/zookeeper/data/.keep
+infrastructure/docker-compose/volumes/zookeeper/transactions/*
+!infrastructure/docker-compose/volumes/zookeeper/transactions/.keep
