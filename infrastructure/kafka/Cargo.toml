@@ -11,3 +11,6 @@ async-trait = { workspace = true }
 apache-avro = { version = "0.14.0", features = ["derive"] }
 uuid = { workspace = true }
 thiserror = { workspace = true }
+rdkafka = "0.29.0"
+schema_registry_converter = { version = "3.1.0", features = ["avro"] }
+chrono = { workspace = true }
