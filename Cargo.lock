@@ -393,6 +393,7 @@ dependencies = [
  "apache-avro",
  "async-trait",
  "derive_builder",
+ "thiserror",
  "uuid",
 ]
 

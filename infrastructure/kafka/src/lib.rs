@@ -98,3 +98,41 @@ pub mod model {
         }
     }
 }
+
+pub mod error {
+    use thiserror::Error;
+
+    #[derive(Error, Debug)]
+    pub enum KafkaError {
+        #[error("ProducerError: {0}")]
+        ProducerError(String),
+    }
+}
+
+pub mod producer {
+    pub mod service {
+        use crate::error::KafkaError;
+
+        trait Producer<K, V> {
+            fn send(&self, key: K, message: V) -> Result<(), KafkaError>;
+        }
+
+        pub struct KafkaProducerImpl<K, V> {
+            // producer: rdkafka::producer::FutureProducer,
+            topic: String,
+            _key: std::marker::PhantomData<K>,
+            _value: std::marker::PhantomData<V>,
+        }
+
+        impl<K, V> Producer<K, V> for KafkaProducerImpl<K, V> {
+            fn send(&self, key: K, message: V) -> Result<(), KafkaError> {
+                // let message = rdkafka::producer::FutureRecord::to(&self.topic)
+                //     .key(&key)
+                //     .payload(&message);
+                // let _ = self.producer.send(message, 0);
+                // Ok(())
+                todo!()
+            }
+        }
+    }
+}
