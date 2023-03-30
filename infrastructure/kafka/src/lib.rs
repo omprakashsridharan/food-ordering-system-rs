@@ -1,3 +1,6 @@
+use apache_avro::AvroSchema;
+use serde::Serialize;
+
 pub mod consumer {
     #[async_trait::async_trait]
     pub trait Consumer<T> {
@@ -108,89 +111,88 @@ pub mod error {
         ProducerError(String),
         #[error("EncoderError")]
         EncoderError(#[from] schema_registry_converter::error::SRCError),
+        #[error("KafkaError")]
+        KafkaError(#[from] rdkafka::error::KafkaError),
     }
 }
 
+#[derive(Serialize)]
+struct Message<T: AvroSchema + Serialize + Send + Sync> {
+    topic: String,
+    key: String,
+    value: T,
+}
+
 pub mod producer {
+    use apache_avro::AvroSchema;
+    use serde::Serialize;
+
+    use crate::{error::KafkaError, Message};
+
+    #[async_trait::async_trait]
+    trait KafkaProducer {
+        async fn produce<T: AvroSchema + Serialize + Send + Sync>(
+            &self,
+            message: Message<T>,
+        ) -> Result<(), KafkaError>;
+    }
     pub mod service {
-        use apache_avro::Schema;
-        use rdkafka::producer::FutureRecord;
-        use schema_registry_converter::async_impl::{
-            avro::AvroEncoder, schema_registry::SrSettings,
+        use std::time::Duration;
+
+        use apache_avro::{AvroSchema, Writer};
+        use rdkafka::{
+            producer::{FutureProducer, FutureRecord},
+            util::Timeout,
+            ClientConfig,
         };
+        use serde::Serialize;
 
-        use crate::error::KafkaError;
+        use crate::{error::KafkaError, Message};
 
-        trait Producer<K, V> {
-            fn send(
-                &self,
-                topic: String,
-                schema: Schema,
-                key: K,
-                message: V,
-            ) -> Result<(), KafkaError>;
-        }
+        use super::KafkaProducer;
 
-        pub struct KafkaProducerImpl<'a, K, V> {
+        pub struct KafkaProducerImpl {
             producer: rdkafka::producer::FutureProducer,
-            _key: std::marker::PhantomData<K>,
-            _value: std::marker::PhantomData<V>,
-            encoder: AvroEncoder<'a>,
+            schema_registry_url: String,
         }
 
-        impl<'a, K, V> KafkaProducerImpl<'a, K, V> {
-            pub fn new(brokers: &str, schema_registry_url: &str) -> Self {
-                let producer = rdkafka::config::ClientConfig::new()
-                    .set("bootstrap.servers", brokers)
-                    .set("message.timeout.ms", "5000")
-                    .create()
-                    .expect("Producer creation error");
-                let schema_registry_settings = SrSettings::new(schema_registry_url.to_string());
-                let encoder = AvroEncoder::new(schema_registry_settings);
+        impl KafkaProducerImpl {
+            pub fn new(brokers: String, schema_registry_url: String) -> Self {
+                let mut producer_config = ClientConfig::new();
+                producer_config.set("bootstrap.servers", brokers);
+                producer_config.set("message.timeout.ms", "5000");
+                let producer: FutureProducer =
+                    producer_config.create().expect("Failed to create producer");
+
                 KafkaProducerImpl {
                     producer,
-                    _key: std::marker::PhantomData,
-                    _value: std::marker::PhantomData,
-                    encoder,
+                    schema_registry_url,
                 }
             }
         }
 
-        impl<'a, K: Clone, V: Clone> Producer<K, V> for KafkaProducerImpl<'a, K, V> {
-            fn send(
+        #[async_trait::async_trait]
+        impl KafkaProducer for KafkaProducerImpl {
+            async fn produce<T: AvroSchema + Serialize + Send + Sync>(
                 &self,
-                topic: String,
-                schema: Schema,
-                key: K,
-                message: V,
+                message: Message<T>,
             ) -> Result<(), KafkaError> {
-                let key = key.to_owned();
-                let message = message.to_owned();
+                let schema = <T as apache_avro::AvroSchema>::get_schema();
+                let mut writer = Writer::new(&schema, Vec::new());
+                writer.append_ser(message.value).unwrap();
+                let encoded_buffer = writer.into_inner().unwrap();
 
-                // Encode the message payload using the Schema Registry
-                let encoded_payload = self
-                    .encoder
-                    .encode(&schema, &message)
-                    .map_err(|err| KafkaError::EncoderError(err))?;
-
-                // Create a Kafka message with the Avro-encoded payload and schema ID
-                let schema_id = self
-                    .encoder
-                    .get_schema_id(&schema)
-                    .map_err(|err| KafkaError::EncoderError(err))?;
-
-                let message = FutureRecord::to(&topic)
-                    .key(&key)
-                    .payload(&encoded_payload)
-                    .timestamp(chrono::Utc::now().timestamp_millis())
-                    .property("avro.schema.id", &schema_id.to_string());
-
-                // Produce the message to the Kafka topic
-                self.producer
-                    .send(message, Timeout::Never)
-                    .map_err(|err| KafkaError::ProducerError(err))?;
-
-                Ok(())
+                let record = FutureRecord::to(&message.topic)
+                    .key(&message.key)
+                    .payload(&encoded_buffer);
+                let timeout: Timeout = Timeout::After(Duration::new(0, 0));
+                let send_result = self
+                    .producer
+                    .send(record, timeout)
+                    .await
+                    .map_err(|e| KafkaError::KafkaError(e.0))
+                    .map(|r| {});
+                send_result
             }
         }
     }
