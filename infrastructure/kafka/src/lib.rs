@@ -151,7 +151,6 @@ pub mod producer {
 
         pub struct KafkaProducerImpl {
             producer: rdkafka::producer::FutureProducer,
-            schema_registry_url: String,
         }
 
         impl KafkaProducerImpl {
@@ -171,10 +170,7 @@ pub mod producer {
                 let producer: FutureProducer =
                     producer_config.create().expect("Failed to create producer");
 
-                KafkaProducerImpl {
-                    producer,
-                    schema_registry_url,
-                }
+                KafkaProducerImpl { producer }
             }
         }
 
@@ -198,7 +194,7 @@ pub mod producer {
                     .send(record, timeout)
                     .await
                     .map_err(|e| KafkaError::KafkaError(e.0))
-                    .map(|r| {});
+                    .map(|_r| {});
                 send_result
             }
         }
