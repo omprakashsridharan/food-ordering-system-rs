@@ -109,8 +109,6 @@ pub mod error {
     pub enum KafkaError {
         #[error("ProducerError: {0}")]
         ProducerError(String),
-        #[error("EncoderError")]
-        EncoderError(#[from] schema_registry_converter::error::SRCError),
         #[error("KafkaError")]
         KafkaError(#[from] rdkafka::error::KafkaError),
     }
@@ -161,6 +159,15 @@ pub mod producer {
                 let mut producer_config = ClientConfig::new();
                 producer_config.set("bootstrap.servers", brokers);
                 producer_config.set("message.timeout.ms", "5000");
+                producer_config.set("schema.registry.url", schema_registry_url.as_str());
+                producer_config.set(
+                    "key.serializer",
+                    "org.apache.kafka.common.serialization.StringSerializer",
+                );
+                producer_config.set(
+                    "value.serializer",
+                    "io.confluent.kafka.serializers.KafkaAvroSerializer",
+                );
                 let producer: FutureProducer =
                     producer_config.create().expect("Failed to create producer");
 
