@@ -6,14 +6,14 @@ pub mod entity {
         pub id: ID,
     }
 
-    #[derive(Clone)]
+    #[derive(Clone, Builder)]
     pub struct AggregateRoot<ID: Clone> {
         pub base_entity: BaseEntity<ID>,
     }
 }
 
 pub mod value_object {
-    use std::fmt::Display;
+    use std::{fmt::Display, str::FromStr};
 
     use derive_builder::Builder;
 
@@ -69,6 +69,21 @@ pub mod value_object {
         Cancelled,
     }
 
+    impl FromStr for OrderStatus {
+        type Err = ();
+
+        fn from_str(s: &str) -> Result<Self, Self::Err> {
+            match s {
+                "Pending" => Ok(OrderStatus::Pending),
+                "Paid" => Ok(OrderStatus::Paid),
+                "Approved" => Ok(OrderStatus::Approved),
+                "Cancelling" => Ok(OrderStatus::Cancelling),
+                "Cancelled" => Ok(OrderStatus::Cancelled),
+                _ => Err(()),
+            }
+        }
+    }
+
     impl Display for OrderStatus {
         fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
             match self {
@@ -90,7 +105,7 @@ pub mod value_object {
 
     #[derive(Clone, Builder)]
     pub struct ProductId {
-        base_id: BaseId<uuid::Uuid>,
+        pub base_id: BaseId<uuid::Uuid>,
     }
 
     impl From<uuid::Uuid> for ProductId {
@@ -157,6 +172,12 @@ pub mod value_object {
             }
         }
 
+        impl From<i64> for Money {
+            fn from(v: i64) -> Self {
+                Self { amount: v as f64 }
+            }
+        }
+
         pub const ZERO: Money = Money { amount: 0.0 };
     }
 }
@@ -197,5 +218,7 @@ pub mod error {
         SaveOrderError,
         #[error("order not found")]
         OrderNotFound,
+        #[error("order item not found")]
+        OrderItemNotFound,
     }
 }

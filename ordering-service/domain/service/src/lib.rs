@@ -148,9 +148,9 @@ pub mod dto {
 
         #[derive(Clone, Builder)]
         pub struct CreateOrderResponse {
-            order_tracking_id: uuid::Uuid,
-            order_status: OrderStatus,
-            message: String,
+            pub order_tracking_id: uuid::Uuid,
+            pub order_status: OrderStatus,
+            pub message: String,
         }
 
         impl From<Order> for CreateOrderResponse {
@@ -169,25 +169,25 @@ pub mod dto {
         use common::value_object::{OrderApprovalStatus, PaymentStatus};
 
         pub struct PaymentResponse {
-            id: String,
-            saga_id: String,
-            order_id: String,
-            payment_id: String,
-            customer_id: String,
-            price: f64,
-            created_at: DateTime<Utc>,
-            payment_status: PaymentStatus,
-            failure_messages: Vec<String>,
+            pub id: String,
+            pub saga_id: String,
+            pub order_id: String,
+            pub payment_id: String,
+            pub customer_id: String,
+            pub price: f64,
+            pub created_at: DateTime<Utc>,
+            pub payment_status: PaymentStatus,
+            pub failure_messages: Vec<String>,
         }
 
         pub struct RestaurantApprovalResponse {
-            id: String,
-            saga_id: String,
-            order_id: String,
-            restaurant_id: String,
-            created_at: DateTime<Utc>,
-            order_approval_status: OrderApprovalStatus,
-            failure_messages: Vec<String>,
+            pub id: String,
+            pub saga_id: String,
+            pub order_id: String,
+            pub restaurant_id: String,
+            pub created_at: DateTime<Utc>,
+            pub order_approval_status: OrderApprovalStatus,
+            pub failure_messages: Vec<String>,
         }
     }
 
@@ -202,9 +202,9 @@ pub mod dto {
 
         #[derive(Clone, Builder)]
         pub struct TrackOrderResponse {
-            order_tracking_id: uuid::Uuid,
-            order_status: OrderStatus,
-            failure_messages: Vec<String>,
+            pub order_tracking_id: uuid::Uuid,
+            pub order_status: OrderStatus,
+            pub failure_messages: Vec<String>,
         }
 
         impl From<Order> for TrackOrderResponse {
@@ -313,7 +313,10 @@ pub mod ports {
             #[async_trait::async_trait]
             pub trait OrderRepository: Send + Sync {
                 async fn save(&self, order: Order) -> Result<Order, OrderDomainError>;
-                async fn find_by_tracking_id(&self, id: TrackingId) -> (bool, Order);
+                async fn find_by_tracking_id(
+                    &self,
+                    id: TrackingId,
+                ) -> Result<Order, OrderDomainError>;
             }
 
             #[async_trait::async_trait]
@@ -433,12 +436,11 @@ impl<OR: OrderRepository> OrderTrackCommandHandler<OR> {
         query: TrackOrderQuery,
     ) -> Result<TrackOrderResponse, OrderDomainError> {
         let tracking_id: TrackingId = query.order_tracking_id.into();
-        let (ok, order) = self.order_repository.find_by_tracking_id(tracking_id).await;
-        if !ok {
-            Err(OrderDomainError::OrderNotFound)
-        } else {
-            Ok(order.into())
-        }
+        let res = self
+            .order_repository
+            .find_by_tracking_id(tracking_id)
+            .await?;
+        Ok(res.into())
     }
 }
 
@@ -481,11 +483,11 @@ pub struct PaymentResponseMessageListenerImpl {}
 
 #[async_trait::async_trait]
 impl PaymentResponseListener for PaymentResponseMessageListenerImpl {
-    async fn payment_completed(&self, response: dto::message::PaymentResponse) {
+    async fn payment_completed(&self, _response: dto::message::PaymentResponse) {
         todo!()
     }
 
-    async fn payment_cancelled(&self, response: dto::message::PaymentResponse) {
+    async fn payment_cancelled(&self, _response: dto::message::PaymentResponse) {
         todo!()
     }
 }
@@ -494,6 +496,6 @@ pub struct RestaurantApprovalResponseMessageListenerImpl {}
 
 #[async_trait::async_trait]
 impl RestaurantApprovalResponseMessageListener for RestaurantApprovalResponseMessageListenerImpl {
-    async fn order_approved(&self, response: RestaurantApprovalResponse) {}
-    async fn order_rejected(&self, response: RestaurantApprovalResponse) {}
+    async fn order_approved(&self, _response: RestaurantApprovalResponse) {}
+    async fn order_rejected(&self, _response: RestaurantApprovalResponse) {}
 }

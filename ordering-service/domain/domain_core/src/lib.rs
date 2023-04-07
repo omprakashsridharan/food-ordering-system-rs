@@ -16,12 +16,12 @@ pub mod entity {
 
     #[derive(Clone)]
     pub struct Customer {
-        aggregate_root: AggregateRoot<CustomerId>,
+        pub aggregate_root: AggregateRoot<CustomerId>,
     }
 
     #[derive(Clone, Builder)]
     pub struct Product {
-        base_entity: BaseEntity<ProductId>,
+        pub base_entity: BaseEntity<ProductId>,
         pub name: String,
         pub price: Money,
     }
@@ -47,7 +47,7 @@ pub mod entity {
 
     #[derive(Clone, Builder)]
     pub struct Restaurant {
-        base_entity: BaseEntity<RestaurantId>,
+        pub base_entity: BaseEntity<RestaurantId>,
         pub products: Vec<Product>,
         active: bool,
     }
@@ -80,7 +80,7 @@ pub mod entity {
 
     #[derive(Clone, Builder)]
     pub struct OrderItem {
-        base_entity: BaseEntity<OrderItemId>,
+        pub base_entity: BaseEntity<OrderItemId>,
         pub order_id: OrderId,
         pub product: Product,
         quantity: u64,
@@ -195,7 +195,7 @@ pub mod value_object {
 
     #[derive(Clone, Builder)]
     pub struct OrderItemId {
-        base_id: BaseId<i64>,
+        pub base_id: BaseId<i64>,
     }
 
     impl From<i64> for OrderItemId {
@@ -209,10 +209,10 @@ pub mod value_object {
 
     #[derive(Clone, Builder)]
     pub struct StreetAddress {
-        id: uuid::Uuid,
-        street: String,
-        postal_code: String,
-        city: String,
+        pub id: uuid::Uuid,
+        pub street: String,
+        pub postal_code: String,
+        pub city: String,
     }
 
     #[derive(Clone)]
