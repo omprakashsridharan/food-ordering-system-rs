@@ -13,3 +13,6 @@ sea-orm = { version = "^0", features = [
 ] }
 uuid = { workspace = true }
 common = { path = "../../common" }
+service = { path = "../domain/service" }
+domain_core = { path = "../domain/domain_core" }
+async-trait = { workspace = true }

@@ -304,6 +304,7 @@ pub mod ports {
         }
 
         pub mod repository {
+            use common::error::OrderDomainError;
             use domain_core::{
                 entity::{Customer, Order, Restaurant},
                 value_object::TrackingId,
@@ -311,7 +312,7 @@ pub mod ports {
 
             #[async_trait::async_trait]
             pub trait OrderRepository: Send + Sync {
-                async fn save(&self, order: Order) -> (bool, Order);
+                async fn save(&self, order: Order) -> Result<Order, OrderDomainError>;
                 async fn find_by_tracking_id(&self, id: TrackingId) -> (bool, Order);
             }
 
@@ -386,12 +387,7 @@ impl<
     }
 
     pub async fn save_order(&self, order: Order) -> Result<Order, OrderDomainError> {
-        let (ok, o) = self.order_repository.save(order).await;
-        if !ok {
-            return Err(OrderDomainError::SaveOrderError);
-        } else {
-            Ok(o)
-        }
+        self.order_repository.save(order).await
     }
 }
 

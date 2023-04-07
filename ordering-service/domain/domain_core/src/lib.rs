@@ -98,15 +98,21 @@ pub mod entity {
 
     #[derive(Clone, Builder)]
     pub struct Order {
-        aggregate_root: AggregateRoot<OrderId>,
-        customer_id: CustomerId,
-        restaurant_id: RestaurantId,
-        street_address: StreetAddress,
-        price: Money,
+        pub aggregate_root: AggregateRoot<OrderId>,
+        pub customer_id: CustomerId,
+        pub restaurant_id: RestaurantId,
+        pub street_address: StreetAddress,
+        pub price: Money,
         pub items: Vec<OrderItem>,
         pub tracking_id: TrackingId,
         pub order_status: OrderStatus,
         pub failure_messages: Vec<String>,
+    }
+
+    impl Into<uuid::Uuid> for Order {
+        fn into(self) -> uuid::Uuid {
+            return self.aggregate_root.base_entity.id.base_id.value;
+        }
     }
 
     impl Order {

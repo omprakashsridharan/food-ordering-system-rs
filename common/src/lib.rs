@@ -3,16 +3,18 @@ pub mod entity {
 
     #[derive(Clone, Builder)]
     pub struct BaseEntity<ID: Clone> {
-        id: ID,
+        pub id: ID,
     }
 
     #[derive(Clone)]
     pub struct AggregateRoot<ID: Clone> {
-        base_entity: BaseEntity<ID>,
+        pub base_entity: BaseEntity<ID>,
     }
 }
 
 pub mod value_object {
+    use std::fmt::Display;
+
     use derive_builder::Builder;
 
     #[derive(Clone, Builder)]
@@ -22,7 +24,13 @@ pub mod value_object {
 
     #[derive(Clone)]
     pub struct CustomerId {
-        base_id: BaseId<uuid::Uuid>,
+        pub base_id: BaseId<uuid::Uuid>,
+    }
+
+    impl Into<uuid::Uuid> for CustomerId {
+        fn into(self) -> uuid::Uuid {
+            return self.base_id.value;
+        }
     }
 
     impl From<uuid::Uuid> for CustomerId {
@@ -41,7 +49,7 @@ pub mod value_object {
 
     #[derive(Clone)]
     pub struct OrderId {
-        base_id: BaseId<uuid::Uuid>,
+        pub base_id: BaseId<uuid::Uuid>,
     }
 
     impl From<uuid::Uuid> for OrderId {
@@ -59,6 +67,18 @@ pub mod value_object {
         Approved,
         Cancelling,
         Cancelled,
+    }
+
+    impl Display for OrderStatus {
+        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+            match self {
+                OrderStatus::Pending => write!(f, "Pending"),
+                OrderStatus::Paid => write!(f, "Paid"),
+                OrderStatus::Approved => write!(f, "Approved"),
+                OrderStatus::Cancelling => write!(f, "Cancelling"),
+                OrderStatus::Cancelled => write!(f, "Cancelled"),
+            }
+        }
     }
 
     #[derive(Clone)]
@@ -94,12 +114,18 @@ pub mod value_object {
         }
     }
 
+    impl Into<uuid::Uuid> for RestaurantId {
+        fn into(self) -> uuid::Uuid {
+            return self.base_id.value;
+        }
+    }
+
     pub mod money {
         use std::ops;
 
         #[derive(Clone)]
         pub struct Money {
-            amount: f64,
+            pub amount: f64,
         }
 
         impl PartialEq for Money {

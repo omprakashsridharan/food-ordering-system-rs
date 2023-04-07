@@ -2,6 +2,7 @@ pub mod adapter {}
 pub mod entity {
 
     pub mod order {
+        use domain_core::entity::Order;
         use sea_orm::entity::prelude::*;
 
         use sea_orm::DeriveEntityModel;
@@ -14,9 +15,23 @@ pub mod entity {
             customer_id: uuid::Uuid,
             restaurant_id: uuid::Uuid,
             tracking_id: uuid::Uuid,
-            price: i32,
+            price: i64,
             order_status: String,
             failure_messages: String,
+        }
+
+        impl From<Order> for Model {
+            fn from(o: Order) -> Self {
+                Self {
+                    id: o.into(),
+                    customer_id: o.customer_id.into(),
+                    restaurant_id: o.restaurant_id.into(),
+                    tracking_id: o.tracking_id.into(),
+                    price: o.price.amount as i64,
+                    order_status: o.order_status.to_string(),
+                    failure_messages: o.failure_messages.join("#"),
+                }
+            }
         }
 
         #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
@@ -113,5 +128,29 @@ pub mod entity {
         impl ActiveModelBehavior for ActiveModel {}
     }
 }
-pub mod mapper {}
-pub mod repository {}
+pub mod repository {
+    use common::error::OrderDomainError;
+    use domain_core::entity::Order;
+    use sea_orm::ActiveModelTrait;
+    use service::ports::output::repository::OrderRepository;
+
+    use crate::entity::order;
+
+    pub struct OrderRepositoryImpl {
+        db: sea_orm::DatabaseConnection,
+    }
+
+    #[async_trait::async_trait]
+    impl OrderRepository for OrderRepositoryImpl {
+        async fn save(&self, order: Order) -> Result<Order, OrderDomainError> {
+            let order_model: order::Model = order.into();
+            let order_active_model: order::ActiveModel = order_model.into();
+            let save_result = order_active_model
+                .insert(&self.db)
+                .await
+                .map_err(|_| OrderDomainError::SaveOrderError)?;
+            Ok(order)
+        }
+        async fn find_by_tracking_id(&self, id: TrackingId) -> (bool, Order);
+    }
+}
