@@ -1,9 +1,11 @@
-pub mod adapter {}
-
 pub mod entity {
     pub mod customer {
-        use sea_orm::DeriveEntityModel;
         use sea_orm::entity::prelude::*;
+        use sea_orm::DeriveEntityModel;
+
+        use common::entity::{AggregateRoot, AggregateRootBuilder, BaseEntityBuilder};
+        use common::value_object::CustomerId;
+        use domain_core::entity::{Customer, CustomerBuilder};
 
         #[derive(Clone, Debug, PartialEq, Eq, DeriveEntityModel)]
         #[sea_orm(table_name = "order_customer_m_view", schema_name = "customer")]
@@ -16,15 +18,39 @@ pub mod entity {
         pub enum Relation {}
 
         impl ActiveModelBehavior for ActiveModel {}
+
+        impl From<Customer> for Model {
+            fn from(c: Customer) -> Self {
+                Self { id: c.into() }
+            }
+        }
+
+        impl Into<Customer> for Model {
+            fn into(self) -> Customer {
+                let customer_id: CustomerId = self.id.into();
+                let base_entity = BaseEntityBuilder::default()
+                    .id(customer_id)
+                    .build()
+                    .unwrap();
+                let aggregate_root: AggregateRoot<CustomerId> = AggregateRootBuilder::default()
+                    .base_entity(base_entity)
+                    .build()
+                    .unwrap();
+                CustomerBuilder::default()
+                    .aggregate_root(aggregate_root)
+                    .build()
+                    .unwrap()
+            }
+        }
     }
 
     pub mod order {
-        use sea_orm::DeriveEntityModel;
         use sea_orm::entity::prelude::*;
+        use sea_orm::DeriveEntityModel;
 
         use common::entity::{AggregateRoot, AggregateRootBuilder, BaseEntityBuilder};
-        use common::value_object::{CustomerId, OrderId, OrderStatus, RestaurantId};
         use common::value_object::money::Money;
+        use common::value_object::{CustomerId, OrderId, OrderStatus, RestaurantId};
         use domain_core::entity::{Order, OrderBuilder};
         use domain_core::value_object::TrackingId;
 
@@ -110,8 +136,8 @@ pub mod entity {
     }
 
     pub mod order_address {
-        use sea_orm::DeriveEntityModel;
         use sea_orm::entity::prelude::*;
+        use sea_orm::DeriveEntityModel;
 
         #[derive(Clone, Debug, PartialEq, Eq, DeriveEntityModel)]
         #[sea_orm(table_name = "order_addresses")]
@@ -144,8 +170,8 @@ pub mod entity {
     }
 
     pub mod order_item {
-        use sea_orm::DeriveEntityModel;
         use sea_orm::entity::prelude::*;
+        use sea_orm::DeriveEntityModel;
 
         use common::entity::{BaseEntity, BaseEntityBuilder};
         use common::value_object;
@@ -223,12 +249,12 @@ pub mod repository {
 
     use common::error::OrderDomainError;
     use domain_core::{
-        entity::{Order, OrderItem},
+        entity::{Customer, Order, OrderItem},
         value_object::{StreetAddress, StreetAddressBuilder, TrackingId},
     };
-    use service::ports::output::repository::OrderRepository;
+    use service::ports::output::repository::{CustomerRepository, OrderRepository};
 
-    use crate::entity::{order, order_address, order_item};
+    use crate::entity::{customer, order, order_address, order_item};
 
     pub struct OrderRepositoryImpl {
         db: sea_orm::DatabaseConnection,
@@ -275,6 +301,25 @@ pub mod repository {
             order.street_address = street_address;
             order.items = order_items;
             Ok(order)
+        }
+    }
+
+    pub struct CustomerRepositoryImpl {
+        db: sea_orm::DatabaseConnection,
+    }
+
+    #[async_trait::async_trait]
+    impl CustomerRepository for CustomerRepositoryImpl {
+        async fn find_customer(
+            &self,
+            customer_id: uuid::Uuid,
+        ) -> Result<Customer, OrderDomainError> {
+            let customer_model = customer::Entity::find_by_id(customer_id)
+                .one(&self.db)
+                .await
+                .map_err(|_| OrderDomainError::CustomerNotFound)?
+                .ok_or(OrderDomainError::CustomerNotFound)?;
+            Ok(customer_model.into())
         }
     }
 }

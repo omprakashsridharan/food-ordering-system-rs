@@ -14,9 +14,15 @@ pub mod entity {
 
     use crate::value_object::{OrderItemId, StreetAddress, TrackingId};
 
-    #[derive(Clone)]
+    #[derive(Clone, Builder)]
     pub struct Customer {
         pub aggregate_root: AggregateRoot<CustomerId>,
+    }
+
+    impl Into<uuid::Uuid> for Customer {
+        fn into(self) -> uuid::Uuid {
+            return self.aggregate_root.base_entity.id.base_id.value;
+        }
     }
 
     #[derive(Clone, Builder)]

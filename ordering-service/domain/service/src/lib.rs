@@ -321,7 +321,7 @@ pub mod ports {
 
             #[async_trait::async_trait]
             pub trait CustomerRepository: Send + Sync {
-                async fn find_customer(&self, customer_id: uuid::Uuid) -> (bool, Customer);
+                async fn find_customer(&self, customer_id: uuid::Uuid) -> Result<Customer, OrderDomainError>;
             }
 
             #[async_trait::async_trait]
@@ -365,12 +365,8 @@ impl<
     }
 
     pub async fn check_customer(&self, customer_id: uuid::Uuid) -> Result<(), OrderDomainError> {
-        let (ok, _) = self.customer_repository.find_customer(customer_id).await;
-        if !ok {
-            return Err(OrderDomainError::CustomerNotFound);
-        } else {
-            Ok(())
-        }
+        let _ = self.customer_repository.find_customer(customer_id).await?;
+        Ok(())
     }
 
     pub async fn check_restaurant(
