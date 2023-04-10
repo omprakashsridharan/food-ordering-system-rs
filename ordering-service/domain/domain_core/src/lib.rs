@@ -45,6 +45,12 @@ pub mod entity {
         }
     }
 
+    impl Into<uuid::Uuid> for Product {
+        fn into(self) -> uuid::Uuid {
+            return self.base_entity.id.base_id.value;
+        }
+    }
+
     impl PartialEq for Product {
         fn eq(&self, other: &Self) -> bool {
             self.name == other.name && self.price == other.price
@@ -55,7 +61,13 @@ pub mod entity {
     pub struct Restaurant {
         pub base_entity: BaseEntity<RestaurantId>,
         pub products: Vec<Product>,
-        active: bool,
+        pub active: bool,
+    }
+
+    impl Into<uuid::Uuid> for Restaurant {
+        fn into(self) -> uuid::Uuid {
+            return self.base_entity.id.base_id.value;
+        }
     }
 
     impl Restaurant {

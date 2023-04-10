@@ -321,12 +321,18 @@ pub mod ports {
 
             #[async_trait::async_trait]
             pub trait CustomerRepository: Send + Sync {
-                async fn find_customer(&self, customer_id: uuid::Uuid) -> Result<Customer, OrderDomainError>;
+                async fn find_customer(
+                    &self,
+                    customer_id: uuid::Uuid,
+                ) -> Result<Customer, OrderDomainError>;
             }
 
             #[async_trait::async_trait]
             pub trait RestaurantRepository: Send + Sync {
-                async fn find_restaurant_info(&self, restaurant: Restaurant) -> (bool, Restaurant);
+                async fn find_restaurant_info(
+                    &self,
+                    restaurant: Restaurant,
+                ) -> Result<Restaurant, OrderDomainError>;
             }
         }
     }
@@ -374,15 +380,11 @@ impl<
         command: CreateOrderCommand,
     ) -> Result<Restaurant, OrderDomainError> {
         let restaurant: Restaurant = command.into();
-        let (ok, _) = self
+        let _ = self
             .restaurant_repository
             .find_restaurant_info(restaurant.clone())
-            .await;
-        if !ok {
-            return Err(OrderDomainError::RestaurantNotFound);
-        } else {
-            Ok(restaurant)
-        }
+            .await?;
+        Ok(restaurant)
     }
 
     pub async fn save_order(&self, order: Order) -> Result<Order, OrderDomainError> {

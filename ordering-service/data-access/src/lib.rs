@@ -44,6 +44,64 @@ pub mod entity {
         }
     }
 
+    pub mod restaurant {
+        use common::{
+            entity::BaseEntityBuilder,
+            value_object::{ProductId, RestaurantId},
+        };
+        use sea_orm::entity::prelude::*;
+        use sea_orm::DeriveEntityModel;
+
+        use domain_core::entity::{Product, ProductBuilder, Restaurant, RestaurantBuilder};
+
+        #[derive(Clone, Debug, PartialEq, Eq, DeriveEntityModel)]
+        #[sea_orm(table_name = "order_restaurant_m_view", schema_name = "restaurant")]
+        pub struct Model {
+            #[sea_orm(primary_key)]
+            pub restaurant_id: uuid::Uuid,
+            #[sea_orm(primary_key)]
+            pub product_id: uuid::Uuid,
+            pub resdraurant_name: String,
+            pub product_name: String,
+            pub restaurant_active: bool,
+            pub product_price: i64,
+        }
+
+        #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
+        pub enum Relation {}
+
+        impl ActiveModelBehavior for ActiveModel {}
+
+        impl Into<Product> for Model {
+            fn into(self) -> Product {
+                let product_id: ProductId = self.product_id.into();
+                let base_entity = BaseEntityBuilder::default().id(product_id).build().unwrap();
+
+                ProductBuilder::default()
+                    .base_entity(base_entity)
+                    .name(self.product_name)
+                    .price(self.product_price.into())
+                    .build()
+                    .unwrap()
+            }
+        }
+
+        impl Into<Restaurant> for Model {
+            fn into(self) -> Restaurant {
+                let restaurant_id: RestaurantId = self.restaurant_id.into();
+                let base_entity = BaseEntityBuilder::default()
+                    .id(restaurant_id)
+                    .build()
+                    .unwrap();
+                RestaurantBuilder::default()
+                    .base_entity(base_entity)
+                    .active(self.restaurant_active)
+                    .build()
+                    .unwrap()
+            }
+        }
+    }
+
     pub mod order {
         use sea_orm::entity::prelude::*;
         use sea_orm::DeriveEntityModel;
@@ -249,12 +307,14 @@ pub mod repository {
 
     use common::error::OrderDomainError;
     use domain_core::{
-        entity::{Customer, Order, OrderItem},
+        entity::{Customer, Order, OrderItem, Restaurant},
         value_object::{StreetAddress, StreetAddressBuilder, TrackingId},
     };
-    use service::ports::output::repository::{CustomerRepository, OrderRepository};
+    use service::ports::output::repository::{
+        CustomerRepository, OrderRepository, RestaurantRepository,
+    };
 
-    use crate::entity::{customer, order, order_address, order_item};
+    use crate::entity::{customer, order, order_address, order_item, restaurant};
 
     pub struct OrderRepositoryImpl {
         db: sea_orm::DatabaseConnection,
@@ -320,6 +380,43 @@ pub mod repository {
                 .map_err(|_| OrderDomainError::CustomerNotFound)?
                 .ok_or(OrderDomainError::CustomerNotFound)?;
             Ok(customer_model.into())
+        }
+    }
+
+    pub struct RestaurantRepositoryImpl {
+        db: sea_orm::DatabaseConnection,
+    }
+
+    #[async_trait::async_trait]
+    impl RestaurantRepository for RestaurantRepositoryImpl {
+        async fn find_restaurant_info(
+            &self,
+            restaurant: Restaurant,
+        ) -> Result<Restaurant, OrderDomainError> {
+            let product_uuids: Vec<uuid::Uuid> = restaurant
+                .clone()
+                .products
+                .into_iter()
+                .map(|p| p.into())
+                .collect();
+            let restaurant_id: uuid::Uuid = restaurant.into();
+            let restaurant_with_all_products = restaurant::Entity::find()
+                .filter(restaurant::Column::RestaurantId.eq(restaurant_id))
+                .filter(restaurant::Column::ProductId.is_in(product_uuids))
+                .all(&self.db)
+                .await
+                .map_err(|_| OrderDomainError::RestaurantNotFound)?;
+            if let Some(restaurant_model) = restaurant_with_all_products.first() {
+                let products = restaurant_with_all_products
+                    .iter()
+                    .map(|restaurant_model| (*restaurant_model).clone().into())
+                    .collect();
+                let mut restaurant: Restaurant = (*restaurant_model).clone().into();
+                restaurant.products = products;
+                Ok(restaurant)
+            } else {
+                return Err(OrderDomainError::RestaurantNotFound);
+            }
         }
     }
 }

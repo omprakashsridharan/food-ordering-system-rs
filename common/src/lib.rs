@@ -118,7 +118,7 @@ pub mod value_object {
 
     #[derive(Clone, Builder)]
     pub struct RestaurantId {
-        base_id: BaseId<uuid::Uuid>,
+        pub base_id: BaseId<uuid::Uuid>,
     }
 
     impl From<uuid::Uuid> for RestaurantId {
