@@ -1,15 +1,32 @@
 pub mod adapter {}
-pub mod entity {
 
-    pub mod order {
-        use common::entity::{AggregateRoot, AggregateRootBuilder, BaseEntityBuilder};
-        use common::value_object::money::Money;
-        use common::value_object::{CustomerId, OrderId, OrderStatus, RestaurantId};
-        use domain_core::entity::{Order, OrderBuilder};
-        use domain_core::value_object::TrackingId;
+pub mod entity {
+    pub mod customer {
+        use sea_orm::DeriveEntityModel;
         use sea_orm::entity::prelude::*;
 
+        #[derive(Clone, Debug, PartialEq, Eq, DeriveEntityModel)]
+        #[sea_orm(table_name = "order_customer_m_view", schema_name = "customer")]
+        pub struct Model {
+            #[sea_orm(primary_key)]
+            pub id: uuid::Uuid,
+        }
+
+        #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
+        pub enum Relation {}
+
+        impl ActiveModelBehavior for ActiveModel {}
+    }
+
+    pub mod order {
         use sea_orm::DeriveEntityModel;
+        use sea_orm::entity::prelude::*;
+
+        use common::entity::{AggregateRoot, AggregateRootBuilder, BaseEntityBuilder};
+        use common::value_object::{CustomerId, OrderId, OrderStatus, RestaurantId};
+        use common::value_object::money::Money;
+        use domain_core::entity::{Order, OrderBuilder};
+        use domain_core::value_object::TrackingId;
 
         #[derive(Clone, Debug, PartialEq, Eq, DeriveEntityModel)]
         #[sea_orm(table_name = "orders")]
@@ -93,9 +110,8 @@ pub mod entity {
     }
 
     pub mod order_address {
-        use sea_orm::entity::prelude::*;
-
         use sea_orm::DeriveEntityModel;
+        use sea_orm::entity::prelude::*;
 
         #[derive(Clone, Debug, PartialEq, Eq, DeriveEntityModel)]
         #[sea_orm(table_name = "order_addresses")]
@@ -128,13 +144,13 @@ pub mod entity {
     }
 
     pub mod order_item {
+        use sea_orm::DeriveEntityModel;
+        use sea_orm::entity::prelude::*;
+
         use common::entity::{BaseEntity, BaseEntityBuilder};
         use common::value_object;
         use domain_core::entity::{OrderItem, OrderItemBuilder, Product, ProductBuilder};
         use domain_core::value_object::OrderItemId;
-        use sea_orm::entity::prelude::*;
-
-        use sea_orm::DeriveEntityModel;
 
         #[derive(Clone, Debug, PartialEq, Eq, DeriveEntityModel)]
         #[sea_orm(table_name = "order_items")]
@@ -201,13 +217,15 @@ pub mod entity {
         impl ActiveModelBehavior for ActiveModel {}
     }
 }
+
 pub mod repository {
+    use sea_orm::{ActiveModelTrait, ColumnTrait, EntityTrait, QueryFilter};
+
     use common::error::OrderDomainError;
     use domain_core::{
         entity::{Order, OrderItem},
         value_object::{StreetAddress, StreetAddressBuilder, TrackingId},
     };
-    use sea_orm::{ActiveModelTrait, ColumnTrait, EntityTrait, QueryFilter};
     use service::ports::output::repository::OrderRepository;
 
     use crate::entity::{order, order_address, order_item};
@@ -219,8 +237,8 @@ pub mod repository {
     #[async_trait::async_trait]
     impl OrderRepository for OrderRepositoryImpl {
         async fn save(&self, order: Order) -> Result<Order, OrderDomainError> {
-            let order_model: order::Model = order.clone().into();
-            let order_active_model: order::ActiveModel = order_model.into();
+            let order_model: order::Model = order::Model::from(order.clone());
+            let order_active_model: order::ActiveModel = order::ActiveModel::from(order_model);
             let _save_result = order_active_model
                 .insert(&self.db)
                 .await

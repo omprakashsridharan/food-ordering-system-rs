@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<module type="JAVA_MODULE" version="4">
+  <component name="NewModuleRootManager" inherit-compiler-output="true">
+    <exclude-output />
+    <content url="file://$MODULE_DIR$">
+      <sourceFolder url="file://$MODULE_DIR$/common/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/infrastructure/kafka/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/ordering-service/container/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/ordering-service/data-access/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/ordering-service/domain/domain_core/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/ordering-service/domain/service/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/target/debug/build/rdkafka-sys-2632efbd7ad34fa1/out/tests/java" isTestSource="true" />
+      <excludeFolder url="file://$MODULE_DIR$/target" />
+    </content>
+    <orderEntry type="inheritedJdk" />
+    <orderEntry type="sourceFolder" forTests="false" />
+  </component>
+</module>
