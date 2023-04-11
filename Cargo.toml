@@ -15,6 +15,7 @@ members = [
   "ordering-service/domain/service",
   "ordering-service/container",
   "ordering-service/data-access",
+  "ordering-service/messaging",
   "infrastructure/kafka",
   "common",
 ]

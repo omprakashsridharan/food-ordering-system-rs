@@ -1,6 +1,6 @@
 use common::error::OrderDomainError;
 use entity::{Order, Restaurant};
-use event::{OrderCancelled, OrderCreated, OrderPaid};
+use event::{OrderCancelledBuilder, OrderCreatedBuilder, OrderPaidBuilder};
 
 pub mod entity {
     use common::entity::{AggregateRoot, BaseEntity, BaseEntityBuilder};
@@ -256,21 +256,32 @@ pub mod value_object {
 pub mod event {
 
     use common::event::DomainEvent;
+    use derive_builder::Builder;
 
     use crate::entity::Order;
 
-    #[derive(Clone)]
-    pub struct OrderCreated(pub Order);
+    #[derive(Clone, Builder)]
+    pub struct OrderCreated {
+        pub order: Order,
+        pub created_at: chrono::DateTime<chrono::Utc>,
+    }
 
     impl DomainEvent<Order> for OrderCreated {}
 
-    #[derive(Clone)]
-    pub struct OrderCancelled(pub Order);
+    #[derive(Clone, Builder)]
+    pub struct OrderCancelled {
+        pub order: Order,
+        pub created_at: chrono::DateTime<chrono::Utc>,
+    }
 
     impl DomainEvent<Order> for OrderCancelled {}
 
-    #[derive(Clone)]
-    pub struct OrderPaid(pub Order);
+    #[derive(Clone, Builder)]
+    pub struct OrderPaid {
+        pub order: Order,
+        pub created_at: chrono::DateTime<chrono::Utc>,
+    }
+
     impl DomainEvent<Order> for OrderPaid {}
 }
 
@@ -313,13 +324,14 @@ impl OrderDomainService for OrderDomainServiceImpl {
                 }
             }
             order.validate_order()?;
-            Ok(OrderCreated(order))
+            let order_created_event = OrderCreatedBuilder::default().order(order).build().unwrap();
+            Ok(order_created_event)
         }
     }
 
     fn pay_order(mut order: Order) -> Result<event::OrderPaid, OrderDomainError> {
         order.pay()?;
-        Ok(OrderPaid(order))
+        Ok(OrderPaidBuilder::default().order(order).build().unwrap())
     }
 
     fn approve_order(mut order: Order) -> Result<(), OrderDomainError> {
@@ -332,7 +344,10 @@ impl OrderDomainService for OrderDomainServiceImpl {
         failure_messages: Vec<String>,
     ) -> Result<event::OrderCancelled, OrderDomainError> {
         order.init_cancel(failure_messages)?;
-        Ok(OrderCancelled(order))
+        Ok(OrderCancelledBuilder::default()
+            .order(order)
+            .build()
+            .unwrap())
     }
 
     fn cancel_order(

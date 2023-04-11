@@ -419,7 +419,7 @@ impl<
         self.order_created_payment_request_message_publisher
             .publish(order_created_event.clone())
             .await;
-        let create_order_response: CreateOrderResponse = order_created_event.0.into();
+        let create_order_response: CreateOrderResponse = order_created_event.order.into();
         Ok(create_order_response)
     }
 }

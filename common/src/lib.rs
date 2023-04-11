@@ -178,6 +178,12 @@ pub mod value_object {
             }
         }
 
+        impl Into<i64> for Money {
+            fn into(self) -> i64 {
+                self.amount as i64
+            }
+        }
+
         pub const ZERO: Money = Money { amount: 0.0 };
     }
 }

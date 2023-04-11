@@ -312,6 +312,7 @@ name = "common"
 version = "0.1.0"
 dependencies = [
  "async-trait",
+ "chrono",
  "derive_builder",
  "thiserror",
  "uuid",
@@ -532,6 +533,7 @@ name = "domain_core"
 version = "0.1.0"
 dependencies = [
  "async-trait",
+ "chrono",
  "common",
  "derive_builder",
  "uuid",
@@ -923,6 +925,15 @@ name = "memchr"
 version = "2.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2dffe52ecf27772e601905b7522cb4ef790d2cc203488bbd0e2fe85fcb74566d"
+
+[[package]]
+name = "messaging"
+version = "0.1.0"
+dependencies = [
+ "domain_core",
+ "kafka",
+ "uuid",
+]
 
 [[package]]
 name = "minimal-lexical"
