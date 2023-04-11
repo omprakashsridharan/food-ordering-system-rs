@@ -219,7 +219,7 @@ pub mod mapper {
                 .build()
                 .unwrap();
             MessageBuilder::default()
-                .topic(String::from("payment-request")) //TODO: Should change hardcoding
+                .topic(String::from("restaurant-approval-request")) //TODO: Should change hardcoding
                 .key(restaurant_approval_request_message_id.to_string())
                 .value(restaurant_approval_request_message)
                 .build()
