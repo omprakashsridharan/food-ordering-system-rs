@@ -7,7 +7,7 @@ pub mod publisher {
 }
 
 pub mod mapper {
-    use domain_core::event::OrderCreated;
+    use domain_core::event::{OrderCancelled, OrderCreated};
     use kafka::model::avro::payment_request::{PaymentRequest, PaymentRequestBuilder};
 
     pub struct DataMapper {}
@@ -26,6 +26,26 @@ pub mod mapper {
                 .order_id(order_created.order.clone().into())
                 .price(order_created.order.clone().price.into())
                 .created_at(order_created.created_at.timestamp())
+                .payment_order_status(
+                    kafka::model::avro::payment_request::PaymentOrderStatus::PENDING,
+                )
+                .build()
+                .unwrap()
+        }
+
+        pub fn order_cancelled_event_to_payment_request(
+            order_cancelled: OrderCancelled,
+        ) -> PaymentRequest {
+            let payment_request_message_id = uuid::Uuid::new_v4();
+            // Will change later
+            let saga_id = uuid::Uuid::new_v4();
+            PaymentRequestBuilder::default()
+                .id(payment_request_message_id)
+                .saga_id(saga_id)
+                .customer_id(order_cancelled.order.clone().customer_id.into())
+                .order_id(order_cancelled.order.clone().into())
+                .price(order_cancelled.order.clone().price.into())
+                .created_at(order_cancelled.created_at.timestamp())
                 .payment_order_status(
                     kafka::model::avro::payment_request::PaymentOrderStatus::PENDING,
                 )
