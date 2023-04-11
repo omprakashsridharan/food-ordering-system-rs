@@ -283,7 +283,6 @@ pub mod ports {
                     {
                     }
 
-                    #[async_trait::async_trait]
                     pub trait OrderCreatedPaymentRequestMessagePublisher:
                         DomainEventPublisher<Order, OrderCreated>
                     {

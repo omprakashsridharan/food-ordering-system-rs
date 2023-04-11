@@ -101,9 +101,9 @@ pub mod entity {
         pub base_entity: BaseEntity<OrderItemId>,
         pub order_id: OrderId,
         pub product: Product,
-        quantity: u64,
-        price: Money,
-        sub_total: Money,
+        pub quantity: u64,
+        pub price: Money,
+        pub sub_total: Money,
     }
 
     impl OrderItem {

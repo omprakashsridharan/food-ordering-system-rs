@@ -1,4 +1,5 @@
 use apache_avro::AvroSchema;
+use derive_builder::Builder;
 use serde::Serialize;
 
 pub mod consumer {
@@ -14,13 +15,14 @@ pub mod model {
         pub mod payment_request {
             use apache_avro::AvroSchema;
             use derive_builder::Builder;
-            #[derive(apache_avro::AvroSchema, Clone)]
+            use serde::Serialize;
+            #[derive(apache_avro::AvroSchema, Clone, Serialize)]
             pub enum PaymentOrderStatus {
                 PENDING,
                 CANCELLED,
             }
 
-            #[derive(AvroSchema, Builder)]
+            #[derive(AvroSchema, Builder, Serialize, Clone)]
             pub struct PaymentRequest {
                 pub id: uuid::Uuid,
                 pub saga_id: uuid::Uuid,
@@ -57,25 +59,27 @@ pub mod model {
 
         pub mod restaurant_approval_request {
             use apache_avro::AvroSchema;
-            #[derive(apache_avro::AvroSchema)]
+            use derive_builder::Builder;
+            use serde::Serialize;
+            #[derive(apache_avro::AvroSchema, Serialize, Clone)]
             pub enum RestaurantOrderStatus {
                 PAID,
             }
 
-            #[derive(AvroSchema)]
+            #[derive(AvroSchema, Serialize, Clone)]
 
             pub struct Product {
                 pub id: uuid::Uuid,
-                pub quantity: i32,
+                pub quantity: i64,
             }
-            #[derive(AvroSchema)]
+            #[derive(AvroSchema, Serialize, Clone, Builder)]
             pub struct RestaurantApprovalRequest {
                 pub id: uuid::Uuid,
                 pub saga_id: uuid::Uuid,
                 pub restaurant_id: uuid::Uuid,
                 pub order_id: uuid::Uuid,
                 pub restaurant_order_status: RestaurantOrderStatus,
-                pub price: f64,
+                pub price: i64,
                 pub products: Vec<Product>,
                 pub created_at: i64,
             }
@@ -115,8 +119,8 @@ pub mod error {
     }
 }
 
-#[derive(Serialize)]
-struct Message<T: AvroSchema + Serialize + Send + Sync> {
+#[derive(Serialize, Clone, Builder)]
+pub struct Message<T: AvroSchema + Serialize + Send + Sync> {
     topic: String,
     key: String,
     value: T,
@@ -129,7 +133,7 @@ pub mod producer {
     use crate::{error::KafkaError, Message};
 
     #[async_trait::async_trait]
-    trait KafkaProducer {
+    pub trait KafkaProducer {
         async fn produce<T: AvroSchema + Serialize + Send + Sync>(
             &self,
             message: Message<T>,

@@ -6,6 +6,9 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-kafka = {path = "../../infrastructure/kafka"}
+kafka = { path = "../../infrastructure/kafka" }
 domain_core = { path = "../domain/domain_core" }
+service = { path = "../domain/service" }
 uuid = { workspace = true }
+async-trait = { workspace = true }
+common = { path = "../../common" }
